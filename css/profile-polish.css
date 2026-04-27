@@ -1,0 +1,565 @@
+.jp-page {
+  color: #172033;
+}
+
+.dark .jp-page {
+  color: #e6edf5;
+}
+
+.jp-section {
+  padding: 4.5rem 1.25rem;
+}
+
+.jp-section--soft {
+  background: #f6f8fb;
+}
+
+.dark .jp-section--soft {
+  background: #111827;
+}
+
+.jp-hero {
+  padding: 5rem 1.25rem 4rem;
+  background:
+    linear-gradient(90deg, rgba(4, 14, 28, 0.92), rgba(4, 14, 28, 0.74) 44%, rgba(4, 14, 28, 0.42)),
+    url("/media/background.png") center / cover no-repeat,
+    #071425;
+}
+
+.dark .jp-hero {
+  background:
+    linear-gradient(90deg, rgba(4, 14, 28, 0.94), rgba(4, 14, 28, 0.78) 44%, rgba(4, 14, 28, 0.5)),
+    url("/media/background.png") center / cover no-repeat,
+    #071425;
+}
+
+.jp-container {
+  width: min(1120px, 100%);
+  margin: 0 auto;
+}
+
+.jp-narrow {
+  width: min(820px, 100%);
+  margin: 0 auto;
+}
+
+.jp-hero-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.65fr);
+  gap: 2.5rem;
+  align-items: center;
+}
+
+.jp-kicker {
+  margin: 0 0 0.85rem;
+  color: #7dd3fc;
+  font-size: 0.92rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.dark .jp-kicker {
+  color: #5eead4;
+}
+
+.jp-title {
+  margin: 0;
+  max-width: 840px;
+  color: #f8fafc;
+  font-size: 3.55rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  line-height: 1.04;
+}
+
+.dark .jp-title {
+  color: #f8fafc;
+}
+
+.jp-subtitle {
+  margin: 1.25rem 0 0;
+  max-width: 760px;
+  color: #dbeafe;
+  font-size: 1.15rem;
+  line-height: 1.75;
+}
+
+.dark .jp-subtitle {
+  color: #cbd5e1;
+}
+
+.jp-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.8rem;
+}
+
+.jp-button {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.6rem;
+  padding: 0.65rem 1rem;
+  border: 1px solid #0f766e;
+  border-radius: 8px;
+  background: #0f766e;
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.jp-button:hover {
+  background: #115e59;
+  color: #fff;
+}
+
+.jp-button--ghost {
+  background: transparent;
+  color: #0f766e;
+}
+
+.jp-button--ghost:hover {
+  background: #ecfeff;
+  color: #115e59;
+}
+
+.dark .jp-button--ghost {
+  color: #99f6e4;
+}
+
+.dark .jp-button--ghost:hover {
+  background: rgba(45, 212, 191, 0.12);
+  color: #ccfbf1;
+}
+
+.jp-profile-card {
+  border: 1px solid rgba(191, 219, 254, 0.28);
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.72);
+  padding: 1.25rem;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.22);
+  backdrop-filter: blur(8px);
+}
+
+.dark .jp-profile-card {
+  border-color: #243244;
+  background: rgba(15, 23, 42, 0.82);
+  box-shadow: none;
+}
+
+.jp-profile-card img {
+  width: 112px;
+  height: 112px;
+  border-radius: 999px;
+  object-fit: cover;
+  border: 3px solid #fff;
+}
+
+.jp-profile-card h2 {
+  margin: 1rem 0 0.25rem;
+  color: #f8fafc;
+  font-size: 1.35rem;
+  line-height: 1.2;
+}
+
+.dark .jp-profile-card h2 {
+  color: #f8fafc;
+}
+
+.jp-profile-card p {
+  margin: 0.35rem 0;
+  color: #dbeafe;
+  line-height: 1.5;
+}
+
+.dark .jp-profile-card p {
+  color: #cbd5e1;
+}
+
+.jp-meta-list {
+  display: grid;
+  gap: 0.7rem;
+  margin: 1.25rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.jp-meta-list li {
+  padding-top: 0.7rem;
+  border-top: 1px solid rgba(191, 219, 254, 0.22);
+  color: #dbeafe;
+  font-size: 0.95rem;
+}
+
+.dark .jp-meta-list li {
+  border-color: #334155;
+  color: #cbd5e1;
+}
+
+.jp-heading {
+  margin: 0 0 0.85rem;
+  color: #0f172a;
+  font-size: 2.15rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  line-height: 1.15;
+}
+
+.dark .jp-heading {
+  color: #f8fafc;
+}
+
+.jp-lead {
+  margin: 0;
+  color: #475569;
+  font-size: 1.05rem;
+  line-height: 1.75;
+}
+
+.dark .jp-lead {
+  color: #cbd5e1;
+}
+
+.jp-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.jp-grid--two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.jp-card {
+  border: 1px solid #dbe4ee;
+  border-radius: 8px;
+  background: #fff;
+  padding: 1.25rem;
+}
+
+.dark .jp-card {
+  border-color: #243244;
+  background: #0f172a;
+}
+
+.jp-card h3 {
+  margin: 0 0 0.55rem;
+  color: #0f172a;
+  font-size: 1.12rem;
+  line-height: 1.35;
+}
+
+.dark .jp-card h3 {
+  color: #f8fafc;
+}
+
+.jp-card p,
+.jp-card li {
+  color: #475569;
+  line-height: 1.65;
+}
+
+.dark .jp-card p,
+.dark .jp-card li {
+  color: #cbd5e1;
+}
+
+.jp-card img {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+}
+
+.jp-tag-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 1rem;
+}
+
+.jp-tag {
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  padding: 0.25rem 0.55rem;
+  color: #334155;
+  font-size: 0.82rem;
+  line-height: 1.3;
+}
+
+.dark .jp-tag {
+  border-color: #475569;
+  color: #dbeafe;
+}
+
+.jp-list {
+  display: grid;
+  gap: 1rem;
+  margin: 2rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.jp-list li {
+  border-left: 3px solid #0f766e;
+  padding: 0.15rem 0 0.15rem 1rem;
+}
+
+.jp-list h3 {
+  margin: 0 0 0.3rem;
+  color: #0f172a;
+  font-size: 1.05rem;
+}
+
+.dark .jp-list h3 {
+  color: #f8fafc;
+}
+
+.jp-list p {
+  margin: 0;
+  color: #475569;
+  line-height: 1.65;
+}
+
+.dark .jp-list p {
+  color: #cbd5e1;
+}
+
+.jp-timeline {
+  display: grid;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.jp-timeline-item {
+  display: grid;
+  grid-template-columns: 170px minmax(0, 1fr);
+  gap: 1.25rem;
+  border-left: 3px solid #0f766e;
+  padding: 0.1rem 0 0.1rem 1rem;
+}
+
+.jp-date {
+  color: #64748b;
+  font-size: 0.94rem;
+  font-weight: 700;
+}
+
+.dark .jp-date {
+  color: #94a3b8;
+}
+
+.jp-timeline-item h3 {
+  margin: 0 0 0.35rem;
+  color: #0f172a;
+  font-size: 1.08rem;
+}
+
+.dark .jp-timeline-item h3 {
+  color: #f8fafc;
+}
+
+.jp-timeline-item p {
+  margin: 0;
+  color: #475569;
+  line-height: 1.65;
+}
+
+.dark .jp-timeline-item p {
+  color: #cbd5e1;
+}
+
+.jp-publication {
+  border-bottom: 1px solid #e2e8f0;
+  padding: 1rem 0;
+}
+
+.dark .jp-publication {
+  border-color: #334155;
+}
+
+.jp-publication h3 {
+  margin: 0 0 0.45rem;
+  font-size: 1.05rem;
+  line-height: 1.45;
+}
+
+.jp-publication p {
+  margin: 0.2rem 0;
+  color: #475569;
+  line-height: 1.55;
+}
+
+.dark .jp-publication p {
+  color: #cbd5e1;
+}
+
+.jp-note {
+  margin-top: 1rem;
+  color: #64748b;
+  font-size: 0.94rem;
+  line-height: 1.6;
+}
+
+.dark .jp-note {
+  color: #94a3b8;
+}
+
+.jp-link-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+}
+
+.jp-social-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-top: 1rem;
+}
+
+.jp-hero-contact {
+  margin: 1.1rem 0 0;
+  color: #dbeafe;
+  font-size: 0.98rem;
+}
+
+.jp-hero-contact a {
+  color: #bae6fd;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.jp-hero-contact a:hover {
+  color: #fff;
+}
+
+.jp-social-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 2.25rem;
+  border: 1px solid rgba(191, 219, 254, 0.35);
+  border-radius: 999px;
+  padding: 0.45rem 0.75rem;
+  background: rgba(15, 23, 42, 0.42);
+  color: #e0f2fe;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.jp-social-link:hover {
+  border-color: rgba(125, 211, 252, 0.75);
+  background: rgba(14, 116, 144, 0.35);
+  color: #fff;
+}
+
+.jp-social-link svg {
+  width: 1rem;
+  height: 1rem;
+  flex: 0 0 auto;
+  fill: currentColor;
+}
+
+.jp-card .jp-social-links {
+  margin-top: 0.75rem;
+}
+
+.jp-card .jp-social-link {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+  color: #0f766e;
+}
+
+.jp-card .jp-social-link:hover {
+  border-color: #0f766e;
+  background: #ecfeff;
+  color: #115e59;
+}
+
+.dark .jp-card .jp-social-link {
+  border-color: #475569;
+  background: #111827;
+  color: #99f6e4;
+}
+
+.jp-archive-list {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.jp-archive-list a {
+  display: block;
+  border: 1px solid #dbe4ee;
+  border-radius: 8px;
+  padding: 0.9rem 1rem;
+  background: #fff;
+  color: #0f172a;
+  text-decoration: none;
+}
+
+.jp-archive-list a:hover {
+  border-color: #0f766e;
+  color: #0f766e;
+}
+
+.dark .jp-archive-list a {
+  border-color: #243244;
+  background: #0f172a;
+  color: #e6edf5;
+}
+
+.dark .jp-archive-list a:hover {
+  border-color: #5eead4;
+  color: #99f6e4;
+}
+
+@media (max-width: 900px) {
+  .jp-hero {
+    background:
+      linear-gradient(180deg, rgba(4, 14, 28, 0.94), rgba(4, 14, 28, 0.78)),
+      url("/media/background.png") 62% center / cover no-repeat,
+      #071425;
+  }
+
+  .jp-hero-grid,
+  .jp-grid,
+  .jp-grid--two {
+    grid-template-columns: 1fr;
+  }
+
+  .jp-title {
+    font-size: 2.35rem;
+  }
+
+  .jp-section {
+    padding: 3.25rem 1rem;
+  }
+
+  .jp-timeline-item {
+    grid-template-columns: 1fr;
+    gap: 0.35rem;
+  }
+}
+
+@media (max-width: 520px) {
+  .jp-title {
+    font-size: 2rem;
+  }
+
+  .jp-heading {
+    font-size: 1.65rem;
+  }
+
+  .jp-button {
+    width: 100%;
+    justify-content: center;
+  }
+}

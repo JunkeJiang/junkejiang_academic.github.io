@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Hugo Blox | Junke Jiang</title><link>https://junkejiang.github.io/tags/hugo-blox/</link><atom:link href="https://junkejiang.github.io/tags/hugo-blox/index.xml" rel="self" type="application/rss+xml"/><description>Hugo Blox</description><generator>Hugo Blox Builder (https://hugoblox.com)</generator><language>en-us</language><lastBuildDate>Fri, 27 Oct 2023 00:00:00 +0000</lastBuildDate><image><url>https://junkejiang.github.io/media/icon_hu_645fa481986063ef.png</url><title>Hugo Blox</title><link>https://junkejiang.github.io/tags/hugo-blox/</link></image><item><title>🎉 Easily create your own simple yet highly customizable blog</title><link>https://junkejiang.github.io/post/get-started/</link><pubDate>Fri, 27 Oct 2023 00:00:00 +0000</pubDate><guid>https://junkejiang.github.io/post/get-started/</guid><description>&lt;p>Welcome 👋&lt;/p>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Hugo Blox | Junke Jiang</title><link>https://junkejiang.com/tags/hugo-blox/</link><atom:link href="https://junkejiang.com/tags/hugo-blox/index.xml" rel="self" type="application/rss+xml"/><description>Hugo Blox</description><generator>Hugo Blox Builder (https://hugoblox.com)</generator><language>en-us</language><lastBuildDate>Fri, 27 Oct 2023 00:00:00 +0000</lastBuildDate><image><url>https://junkejiang.com/media/icon_hu_645fa481986063ef.png</url><title>Hugo Blox</title><link>https://junkejiang.com/tags/hugo-blox/</link></image><item><title>🎉 Easily create your own simple yet highly customizable blog</title><link>https://junkejiang.com/post/get-started/</link><pubDate>Fri, 27 Oct 2023 00:00:00 +0000</pubDate><guid>https://junkejiang.com/post/get-started/</guid><description>&lt;p>Welcome 👋&lt;/p>
 &lt;details class="print:hidden xl:hidden" open>
 &lt;summary>Table of Contents&lt;/summary>
 &lt;div class="text-sm">
@@ -55,7 +55,7 @@ awesome rewards and extra features 🦄✨&lt;/strong>&lt;/p>
 &lt;h2 id="ecosystem">Ecosystem&lt;/h2>
 &lt;ul>
 &lt;li>&lt;strong>
-:&lt;/strong> Automatically import publications from BibTeX&lt;/li>
+:&lt;/strong> Automatically import publications from citation metadata&lt;/li>
 &lt;/ul>
 &lt;h2 id="inspiration">Inspiration&lt;/h2>
 &lt;p>
@@ -94,7 +94,7 @@ for your site. Themes are fully customizable.&lt;/p>
 &lt;p>Copyright 2016-present
 .&lt;/p>
 &lt;p>Released under the
-license.&lt;/p></description></item><item><title>📈 Communicate your results effectively with the best data visualizations</title><link>https://junkejiang.github.io/post/data-visualization/</link><pubDate>Wed, 25 Oct 2023 00:00:00 +0000</pubDate><guid>https://junkejiang.github.io/post/data-visualization/</guid><description>&lt;p>Hugo Blox is designed to give technical content creators a seamless experience. You can focus on the content and Hugo Blox handles the rest.&lt;/p>
+license.&lt;/p></description></item><item><title>📈 Communicate your results effectively with the best data visualizations</title><link>https://junkejiang.com/post/data-visualization/</link><pubDate>Wed, 25 Oct 2023 00:00:00 +0000</pubDate><guid>https://junkejiang.com/post/data-visualization/</guid><description>&lt;p>Hugo Blox is designed to give technical content creators a seamless experience. You can focus on the content and Hugo Blox handles the rest.&lt;/p>
 &lt;p>Use popular tools such as Plotly, Mermaid, and data frames.&lt;/p>
 &lt;h2 id="charts">Charts&lt;/h2>
 &lt;p>Hugo Blox supports the popular
@@ -244,7 +244,7 @@ Crash --> [*]
 &lt;/tbody>
 &lt;caption class="table-caption">Table 1: My results&lt;/caption>
 &lt;/table>
-&lt;h2 id="did-you-find-this-page-helpful-consider-sharing-it-">Did you find this page helpful? Consider sharing it 🙌&lt;/h2></description></item><item><title>✅ Manage your projects</title><link>https://junkejiang.github.io/post/project-management/</link><pubDate>Mon, 23 Oct 2023 00:00:00 +0000</pubDate><guid>https://junkejiang.github.io/post/project-management/</guid><description>&lt;p>Easily manage your projects - create ideation mind maps, Gantt charts, todo lists, and more!&lt;/p>
+&lt;h2 id="did-you-find-this-page-helpful-consider-sharing-it-">Did you find this page helpful? Consider sharing it 🙌&lt;/h2></description></item><item><title>✅ Manage your projects</title><link>https://junkejiang.com/post/project-management/</link><pubDate>Mon, 23 Oct 2023 00:00:00 +0000</pubDate><guid>https://junkejiang.com/post/project-management/</guid><description>&lt;p>Easily manage your projects - create ideation mind maps, Gantt charts, todo lists, and more!&lt;/p>
 &lt;h2 id="ideation">Ideation&lt;/h2>
 &lt;p>Hugo Blox supports a Markdown extension for mindmaps.&lt;/p>
 &lt;p>Simply insert a Markdown code block labelled as &lt;code>markmap&lt;/code> and optionally set the height of the mindmap as shown in the example below.&lt;/p>
