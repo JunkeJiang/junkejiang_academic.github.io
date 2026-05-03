@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 400" role="img" aria-labelledby="title desc">
+  <title id="title">Publication thumbnail placeholder</title>
+  <desc id="desc">Abstract materials-science network graphic used when no verified publication image is available.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0f172a"/>
+      <stop offset="0.55" stop-color="#164e63"/>
+      <stop offset="1" stop-color="#0f766e"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="72%" cy="34%" r="45%">
+      <stop offset="0" stop-color="#67e8f9" stop-opacity=".55"/>
+      <stop offset="1" stop-color="#67e8f9" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="640" height="400" fill="url(#bg)"/>
+  <rect width="640" height="400" fill="url(#glow)"/>
+  <g fill="none" stroke="#a7f3d0" stroke-opacity=".48" stroke-width="2">
+    <path d="M84 270c86-75 156-82 238-21 79 59 158 61 240-8"/>
+    <path d="M58 184c91-43 167-31 230 31 72 72 164 75 294 8"/>
+    <path d="M142 92c47 49 97 74 151 74 66 0 121-31 166-92"/>
+  </g>
+  <g fill="#cffafe" opacity=".8">
+    <circle cx="116" cy="246" r="8"/>
+    <circle cx="212" cy="191" r="6"/>
+    <circle cx="306" cy="224" r="9"/>
+    <circle cx="401" cy="248" r="7"/>
+    <circle cx="518" cy="211" r="10"/>
+    <circle cx="254" cy="128" r="7"/>
+    <circle cx="440" cy="82" r="8"/>
+  </g>
+  <g fill="none" stroke="#e0f2fe" stroke-opacity=".42" stroke-width="3">
+    <path d="M408 122 468 158 466 228 404 262 344 226 346 156z"/>
+    <path d="M406 122v140M346 156l120 72M468 158 344 226"/>
+    <path d="M254 128 306 224M306 224 404 262M212 191 306 224M440 82 468 158"/>
+  </g>
+</svg>
