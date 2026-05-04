@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import csv
 import html
+import json
 import re
 from pathlib import Path
+from urllib.parse import quote, quote_plus
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -17,13 +19,23 @@ PUBLICATION_METADATA_CSV = ROOT / "tools" / "publication_metadata_enriched.csv"
 PUBLICATION_REVIEW_CSV = ROOT / "tools" / "publication_date_review.csv"
 PUBLICATION_ASSETS_REVIEW_CSV = ROOT / "tools" / "publication_assets_review.csv"
 PUBLICATION_FALLBACK_THUMB = "/media/publications/fallback/publication-thumbnail.svg"
+SITE_ICON = "/media/icon_hu_645fa481986063ef.png"
 DFTB_GITHUB_RELEASES = "https://github.com/dftbparams/perov/releases"
 DFTB_ZENODO_RECORD = "https://zenodo.org/records/14778741"
+THESIS_SLUGS = {"jiang-2021-stabilizing"}
+CURATED_LOCAL_PUBLICATION_SLUGS = {
+    "duan-2026-photostability",
+    "geng-2025-bidentate",
+}
 DFTB_RESOURCE_SLUGS = {
     "jiang-2025-flexible",
+}
+REMOVED_PUBLICATION_SLUGS = {
     "jiang-2024-flexible",
     "jiang-2023-flexible",
     "thebaud-2024-extending",
+    "xianping-2016-ab",
+    "xianping-2016-electrical",
 }
 
 
@@ -83,6 +95,17 @@ def update_nav_and_shared_head(s: str, path: str) -> str:
     s = s.replace(OLD_TITLE, CURRENT_TITLE)
     s = s.replace(OLD_EMAIL, CURRENT_EMAIL)
     s = remove_public_citation_links(s)
+    s = normalize_site_icons(s)
+    return s
+
+
+def normalize_site_icons(s: str) -> str:
+    """Use the curated personal icon for favicons, previews, feeds, and schema logos."""
+    escaped_site_icon = html.escape(SITE_ICON)
+    s = re.sub(r'(?<=href=)(["\']?)/media/icon_hu_[^"\'\s>]+\.png(["\']?)', rf'\1{escaped_site_icon}\2', s)
+    s = re.sub(r'(?<=content=)(["\']?)(?:https?://[^/"\']+)?/media/icon_hu_[^"\'\s>]+\.png(["\']?)', rf'\1{SITE_URL}{escaped_site_icon}\2', s)
+    s = re.sub(r'("url":\s*")https?://[^"]*/media/icon_hu_[^"]+\.png', rf'\1{SITE_URL}{SITE_ICON}', s)
+    s = re.sub(r"(?<=<url>)https?://[^<]*/media/icon_hu_[^<]+\.png(?=</url>)", f"{SITE_URL}{SITE_ICON}", s)
     return s
 
 
@@ -94,6 +117,26 @@ def remove_public_citation_links(s: str) -> str:
     s = bib_link.sub("", s)
     s = re.sub(r"<div class=mt-3><div>\s*</div></div>", "", s)
     s = re.sub(r'<div class="flex flex-wrap space-x-3">\s*</div>', "", s)
+    return s
+
+
+def remove_removed_publication_references(s: str) -> str:
+    """Strip stale public links to publication records removed from the CSV source of truth."""
+    for slug in REMOVED_PUBLICATION_SLUGS:
+        link_target = rf'(?:https://junkejiang\.com)?/publication/{re.escape(slug)}/?'
+        href_pattern = rf'href=(?:"{link_target}"|\'{link_target}\'|{link_target})'
+        s = re.sub(
+            rf'<li\b[^>]*>\s*<a\b(?=[^>]*{href_pattern})[^>]*>.*?</a>\s*</li>',
+            "",
+            s,
+            flags=re.S,
+        )
+        s = re.sub(
+            rf'<a\b(?=[^>]*{href_pattern})[^>]*>.*?</a>',
+            "",
+            s,
+            flags=re.S,
+        )
     return s
 
 
@@ -143,15 +186,15 @@ def publication_html(pub: dict[str, str]) -> str:
 
 SELECTED_PUBLICATIONS = [
     {
-        "title": "Structure and device-operando photostability of quasi-2D Ruddlesden-Popper perovskites: engineering the spacer cation matters",
-        "authors": "J. Duan#, J. Jiang#, U. Kim, J. W. Lee, Y. Yang, M. Choi, Z. Wu, J. Xi",
-        "venue": "ACS Energy Letters, 2026, 11, 1714-1723",
+        "title": "Structure and Device-Operando Photostability of Quasi-2D Ruddlesden–Popper Perovskites: Engineering the Spacer Cation Matters",
+        "authors": "Jianing Duan, Junke Jiang, Unsoo Kim, Jong Woo Lee, Yingguo Yang, Mansoo Choi, Zhaoxin Wu, Jun Xi",
+        "venue": "ACS Energy Letters, 2026, 11(2), 1714-1723",
         "doi": "https://doi.org/10.1021/acsenergylett.5c03228",
     },
     {
-        "title": "Bidentate pyridine passivators attaching trifluoromethyl substitute groups in varied positions for efficient carbon-based perovskite solar cells",
-        "authors": "M. Geng#, J. Jiang#, X. Ma, J. Li, K. Wang, L. Jiang, D. Lu, B. Li, Y. Gu, T. Xu",
-        "venue": "ACS Applied Materials & Interfaces, 2025, 17, 64645-64654",
+        "title": "Bidentate Pyridine Passivators Attaching Trifluoromethyl Substitute Groups in Varied Positions for Efficient Carbon-Based Perovskite Solar Cells",
+        "authors": "Mengqi Geng, Junke Jiang, Xinrui Ma, Jialiang Li, Ke Wang, Le Jiang, Dan Lu, Bin Li, Yu Gu, Tingting Xu",
+        "venue": "ACS Applied Materials & Interfaces, 2025, 17(47), 64645-64654",
         "doi": "https://doi.org/10.1021/acsami.5c18690",
     },
     {
@@ -317,10 +360,17 @@ def anchor_id(text: str) -> str:
 
 
 def format_authors(author_field: str) -> str:
-    value = re.sub(r"\s+and\s+", ", ", author_field)
-    value = value.replace("{", "").replace("}", "")
-    value = re.sub(r"\s+", " ", value).strip()
-    return value
+    value = author_field.replace("{", "").replace("}", "")
+    parts = [re.sub(r"\s+", " ", part).strip() for part in re.split(r"\s+and\s+", value) if part.strip()]
+    rendered = []
+    for part in parts:
+        if "," in part:
+            last, first, *rest = [piece.strip() for piece in part.split(",")]
+            suffix = f", {', '.join(rest)}" if rest else ""
+            rendered.append(f"{first} {last}{suffix}".strip())
+        else:
+            rendered.append(part)
+    return ", ".join(rendered)
 
 
 def publication_doi_from_page(slug: str) -> str:
@@ -409,25 +459,59 @@ def apply_manual_thumbnail(record: dict[str, object], assets_by_slug: dict[str, 
     slug = str(record.get("slug") or anchor_id(str(record.get("title", ""))))
     asset = assets_by_slug.get(slug, {})
     thumbnail_path = (asset.get("thumbnail_path") or "").strip()
+    status = (asset.get("thumbnail_status") or "").strip().lower()
+    image_type = (asset.get("image_type") or "").strip()
+    if image_type:
+        record["image_type"] = image_type
+    if status:
+        record["thumbnail_status"] = status
+    slug_candidate = ROOT / "media" / "publications" / slug / "publication-thumbnail.png"
     if thumbnail_path and thumbnail_path != PUBLICATION_FALLBACK_THUMB:
-        record["thumbnail"] = thumbnail_path
+        candidate = ROOT / thumbnail_path.lstrip("/")
+        if candidate.exists():
+            record["thumbnail"] = thumbnail_path
+            record["thumbnail_status"] = "real"
+        elif slug_candidate.exists():
+            record["thumbnail"] = "/" + slug_candidate.relative_to(ROOT).as_posix()
+            record["thumbnail_status"] = "real"
+        else:
+            record["thumbnail_status"] = "fallback"
+            record["image_type"] = "fallback"
+    elif slug_candidate.exists():
+        record["thumbnail"] = "/" + slug_candidate.relative_to(ROOT).as_posix()
+        record["thumbnail_status"] = "real"
+        if not record.get("image_type") or record.get("image_type") == "fallback":
+            record["image_type"] = "journal_cover"
 
 
 def allowed_publication_slugs() -> set[str]:
     rows = publication_metadata_rows()
     slugs = {row.get("slug", "") for row in rows if row.get("slug")}
-    return slugs | DFTB_RESOURCE_SLUGS
+    return slugs
 
 
 def month_name(month: int) -> str:
     return ("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")[month - 1]
 
 
+def publication_date_iso(pub: dict[str, object]) -> str:
+    value = str(pub.get("publication_date") or "").strip()
+    if re.fullmatch(r"\d{4}-\d{2}-\d{2}", value):
+        return value
+    if re.fullmatch(r"\d{1,2}/\d{1,2}/\d{4}", value):
+        first, second, year = value.split("/")
+        day = int(first)
+        month = int(second)
+        return f"{year}-{month:02d}-{day:02d}"
+    return ""
+
+
 def publication_date_display(pub: dict[str, object]) -> str:
     value = str(pub.get("publication_date") or pub.get("year") or "")
     precision = str(pub.get("date_precision") or "year")
-    if precision == "day" and re.fullmatch(r"\d{4}-\d{2}-\d{2}", value):
-        year, month, day = value.split("-")
+    iso = publication_date_iso(pub)
+    if precision == "day" and iso:
+        year, month, day = iso.split("-")
         return f"{month_name(int(month))} {int(day)}, {year}"
     if precision == "month" and re.fullmatch(r"\d{4}-\d{2}", value):
         year, month = value.split("-")
@@ -544,10 +628,12 @@ def selected_publication_records() -> list[dict[str, object]]:
         tags = infer_tags(pub["title"], venue)
         doi = normalize_resource_url(pub.get("doi", ""))
         metadata = metadata_by_doi.get(doi.lower(), {})
+        slug = metadata.get("slug", "")
+        href = f"/publication/{slug}/" if slug else ""
         record = (
             {
-                "slug": "",
-                "href": "",
+                "slug": slug,
+                "href": href,
                 "title": pub["title"],
                 "authors": pub["authors"],
                 "venue": venue,
@@ -557,9 +643,11 @@ def selected_publication_records() -> list[dict[str, object]]:
                 "publication_date": metadata.get("publication_date", ""),
                 "date_precision": metadata.get("date_precision", "year"),
                 "date_source": metadata.get("date_source", ""),
+                "abstract": metadata.get("abstract", ""),
                 "summary": pub.get("note") or conservative_summary(pub["title"], tags),
                 "tags": tags,
                 "topic": primary_topic(tags),
+                "publication_type": "Journal article",
                 "links": [("DOI", doi)] if doi else [],
                 "selected": True,
             }
@@ -568,6 +656,235 @@ def selected_publication_records() -> list[dict[str, object]]:
         apply_manual_thumbnail(record, assets_by_slug)
         records.append(record)
     return records
+
+
+def publication_detail_authors_html(authors: str) -> str:
+    names = [name.strip() for name in authors.split(",") if name.strip()]
+    if not names:
+        return ""
+    rendered = []
+    for index, name in enumerate(names):
+        rendered.append(
+            '<div class="group inline-flex items-center text-current gap-x-1.5 mx-1">'
+            f"<div>{html.escape(name)}</div></div>"
+        )
+        if index < len(names) - 1:
+            rendered.append("<span class=mr-1>,</span>")
+    return "".join(rendered)
+
+
+def publication_detail_top_links(pub: dict[str, object]) -> str:
+    candidates: list[tuple[str, str]] = []
+    doi = str(pub.get("doi") or "").strip()
+    official_url = str(pub.get("official_url") or "").strip()
+    if doi:
+        candidates.append(("DOI", doi))
+    if official_url and not same_resource_url(official_url, doi):
+        candidates.append(("Article Page", official_url))
+    if not candidates:
+        return ""
+    links = "".join(
+        f'<a class="hb-attachment-link hb-attachment-large" href={html.escape(url)} '
+        f'target=_blank rel=noopener>{html.escape(label)}</a>'
+        for label, url in candidates
+    )
+    return f'<div class=mt-3><div>{links}</div></div>'
+
+
+def publication_detail_type_html(pub: dict[str, object]) -> str:
+    pub_type = str(pub.get("publication_type") or "Journal article")
+    if is_thesis_record(pub):
+        return "PhD thesis"
+    if pub_type.lower() == "journal article":
+        return '<a href=/publication_types/article-journal/>Journal article</a>'
+    return html.escape(pub_type)
+
+
+def publication_detail_share_link(label: str, url: str, svg_path: str) -> str:
+    return (
+        '<a target=_blank rel=noopener class="m-1 rounded-md bg-neutral-300 p-1.5 text-neutral-700 '
+        'hover:bg-primary-500 hover:text-neutral-300 dark:bg-neutral-700 dark:text-neutral-300 '
+        f'dark:hover:bg-primary-400 dark:hover:text-neutral-800" href="{html.escape(url, quote=True)}" '
+        f'title={html.escape(label)} aria-label={html.escape(label)} id=share-link-{anchor_id(label)}>'
+        f'<svg style="height:1em" viewBox="0 0 24 24"><path fill="currentcolor" d="{svg_path}"/></svg></a>'
+    )
+
+
+def publication_detail_prev_next(pub: dict[str, object]) -> str:
+    slug = str(pub.get("slug") or "")
+    records = [record for record in publication_records(include_selected=True) if record.get("href")]
+    index = next((i for i, record in enumerate(records) if record.get("slug") == slug), -1)
+    if index < 0:
+        return ""
+
+    def nav_item(record: dict[str, object], direction: str) -> str:
+        title = html.escape(str(record.get("title") or "Publication"))
+        year = html.escape(str(record.get("year") or ""))
+        href = html.escape(str(record.get("href") or "#"))
+        if direction == "previous":
+            return (
+                f'<div><a class="group flex no-underline" href={href}>'
+                '<span class="mt-[-0.3rem] me-2 text-neutral-700 transition-transform group-hover:-translate-x-[2px] '
+                'group-hover:text-primary-600 dark:text-neutral dark:group-hover:text-primary-400">'
+                '<span class="ltr:inline rtl:hidden">&larr;</span></span>'
+                f'<span class="flex flex-col"><span class="mt-[0.1rem] leading-6 group-hover:underline '
+                f'group-hover:decoration-primary-500">{title}</span><span class="mt-[0.1rem] text-xs '
+                f'text-neutral-500 dark:text-neutral-400">{year}</span></span></a></div>'
+            )
+        return (
+            f'<div><a class="group flex text-right no-underline" href={href}>'
+            f'<span class="flex flex-col"><span class="mt-[0.1rem] leading-6 group-hover:underline '
+            f'group-hover:decoration-primary-500">{title}</span><span class="mt-[0.1rem] text-xs '
+            f'text-neutral-500 dark:text-neutral-400">{year}</span></span>'
+            '<span class="mt-[-0.3rem] ms-2 text-neutral-700 transition-transform group-hover:-translate-x-[2px] '
+            'group-hover:text-primary-600 dark:text-neutral dark:group-hover:text-primary-400">'
+            '<span class=ltr:inline>&rarr;</span></span></a></div>'
+        )
+
+    previous_html = nav_item(records[index + 1], "previous") if index + 1 < len(records) else "<div></div>"
+    next_html = nav_item(records[index - 1], "next") if index > 0 else "<div></div>"
+    return (
+        '<div class="pt-1 no-prose w-full"><hr class="border-dotted border-neutral-300 dark:border-neutral-600">'
+        f'<div class="flex flex-col md:flex-row flex-nowrap justify-between gap-5 pt-2">{previous_html}{next_html}</div></div>'
+    )
+
+
+def publication_detail_share_html(pub: dict[str, object]) -> str:
+    title = str(pub.get("title") or "Publication")
+    href = str(pub.get("href") or f"/publication/{pub.get('slug')}/")
+    url = f"{SITE_URL}{href}"
+    encoded_url = quote(url, safe="")
+    plus_title = quote_plus(title)
+    quoted_title = quote(title, safe="")
+    icon_x = "M18.2 3h2.4l-5.3 6.1L21.5 21h-5l-3.8-7.2L6.5 21H4.1l5.7-6.6L2.5 3h5.1l3.4 6.3L18.2 3z"
+    icon_fb = "M22 12c0-5.5-4.5-10-10-10S2 6.5 2 12c0 4.8 3.4 8.9 8 9.8V15H8v-3h2V9.5C10 7.6 11.6 6 13.5 6H16v3h-2c-.6 0-1 .4-1 1v2h3v3h-3v7c5-.5 9-4.8 9-10z"
+    icon_mail = "M3 5h18v14H3V5zm2 2v.4l7 4.4 7-4.4V7H5zm14 10V9.8l-7 4.4-7-4.4V17h14z"
+    icon_in = "M4 4h16v16H4V4zm4.1 13.2V9.7H5.8v7.5h2.3zM7 8.7a1.3 1.3 0 1 0 0-2.6 1.3 1.3 0 0 0 0 2.6zm10.4 8.5v-4c0-2.1-1.1-3.7-3.2-3.7-1.1 0-1.8.6-2.1 1.1h-.1v-.9H9.9v7.5h2.3v-3.7c0-1 .2-1.9 1.4-1.9s1.2 1.1 1.2 2v3.6h2.6z"
+    icon_wa = "M12 2a9.9 9.9 0 0 0-8.5 15L2 22l5.2-1.4A10 10 0 1 0 12 2zm0 18a8 8 0 0 1-4.1-1.1l-.3-.2-3 .8.8-2.9-.2-.3A8 8 0 1 1 12 20zm4.4-5.9c-.2-.1-1.4-.7-1.6-.8s-.4-.1-.5.1-.6.8-.7 1c-.1.1-.3.2-.5.1a6.5 6.5 0 0 1-3.2-2.8c-.1-.2 0-.4.1-.5l.4-.5c.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5l-.8-1.8c-.2-.5-.4-.4-.5-.4h-.5c-.2 0-.5.1-.7.3-.2.3-.9.9-.9 2.2s.9 2.5 1.1 2.7c.1.2 1.8 2.8 4.4 3.9.6.3 1.1.4 1.5.5.6.2 1.2.2 1.6.1.5-.1 1.4-.6 1.6-1.1.2-.6.2-1 .1-1.1l-.4-.2z"
+    links = [
+        publication_detail_share_link("X", f"https://twitter.com/intent/tweet?url={encoded_url}&text={plus_title}", icon_x),
+        publication_detail_share_link("Facebook", f"https://www.facebook.com/sharer.php?u={encoded_url}&t={plus_title}", icon_fb),
+        publication_detail_share_link("Email", f"mailto:?subject={quoted_title}&body={encoded_url}", icon_mail),
+        publication_detail_share_link("LinkedIn", f"https://www.linkedin.com/shareArticle?url={encoded_url}&title={plus_title}", icon_in),
+        publication_detail_share_link("WhatsApp", f"whatsapp://send?text={plus_title}%20{encoded_url}", icon_wa),
+    ]
+    return (
+        '<div class="container mx-auto prose prose-slate lg:prose-xl dark:prose-invert mt-5">'
+        '<div class="max-w-prose print:hidden"><section class="flex flex-row flex-wrap justify-center pt-4 text-xl">'
+        + "".join(links)
+        + "</section>"
+        + publication_detail_prev_next(pub)
+        + "</div></div>"
+    )
+
+
+def publication_structured_metadata(pub: dict[str, object]) -> str:
+    title = str(pub.get("title") or "Publication")
+    href = str(pub.get("href") or f"/publication/{pub.get('slug')}/")
+    iso = publication_date_iso(pub)
+    date_value = f"{iso}T00:00:00Z" if iso else str(pub.get("year") or "")
+    first_author = str(pub.get("authors") or "").split(",", 1)[0].strip() or "Junke Jiang"
+    data = {
+        "@context": "https://schema.org",
+        "@type": "ScholarlyArticle" if not is_thesis_record(pub) else "Thesis",
+        "mainEntityOfPage": {"@type": "WebPage", "@id": f"{SITE_URL}{href}"},
+        "headline": title,
+        "datePublished": date_value,
+        "dateModified": date_value,
+        "author": {"@type": "Person", "name": first_author},
+        "publisher": {
+            "@type": "Organization",
+            "name": "Junke Jiang",
+            "logo": {"@type": "ImageObject", "url": f"{SITE_URL}{SITE_ICON}"},
+        },
+        "description": abstract_excerpt(str(pub.get("abstract") or pub.get("summary") or "")),
+    }
+    return '<script type=application/ld+json>' + json.dumps(data, ensure_ascii=False, separators=(",", ":")) + "</script>"
+
+
+def update_publication_structured_metadata(s: str, pub: dict[str, object]) -> str:
+    structured = publication_structured_metadata(pub)
+    if re.search(r"<script type=application/ld\+json>.*?</script>", s, flags=re.S):
+        return re.sub(r"<script type=application/ld\+json>.*?</script>", structured, s, count=1, flags=re.S)
+    return s.replace("<title>", structured + "<title>", 1)
+
+
+def publication_detail_body(pub: dict[str, object]) -> str:
+    """Build a Hugo/Blox-compatible detail page for metadata-only publication records."""
+    title = str(pub.get("title") or "Publication")
+    venue = str(pub.get("venue") or "").strip()
+    authors = str(pub.get("authors") or "").strip()
+    display_date = publication_date_display(pub) or str(pub.get("year") or "")
+    iso = publication_date_iso(pub)
+    datetime_attr = f' datetime={iso}T00:00:00.000Z' if iso else ""
+    year_or_date = display_date or str(pub.get("year") or "")
+    venue_value = venue or "Publication venue TBC"
+    authors_html = publication_detail_authors_html(authors)
+    authors_block = f'<span class=mx-1>·</span>{authors_html}' if authors_html else ""
+    return (
+        '<div class="page-body my-10"><div class="mx-auto flex max-w-screen-xl">'
+        '<aside class="hb-sidebar-container max-lg:[transform:translate3d(0,-100%,0)] lg:hidden xl:block" aria-hidden="true">'
+        '<div class="px-4 pt-4 lg:hidden"></div><div class="hb-scrollbar lg:h-[calc(100vh-var(--navbar-height))]"></div></aside>'
+        + '<nav class="hb-toc order-last hidden w-64 shrink-0 xl:block print:hidden px-4" aria-label="table of contents">'
+        '<div class="hb-scrollbar text-sm [hyphens:auto] sticky top-16 overflow-y-auto pr-4 pt-6 '
+        'max-h-[calc(100vh-var(--navbar-height)-env(safe-area-inset-bottom))] -mr-4 rtl:-ml-4"></div></nav>'
+        '<article class="w-full break-words flex min-h-[calc(100vh-var(--navbar-height))] min-w-0 '
+        'justify-center pb-8 pr-[calc(env(safe-area-inset-right)-1.5rem)]">'
+        '<main class="w-full min-w-0 max-w-6xl px-6 pt-4 md:px-12">'
+        f'<h1 class="mt-2 text-4xl font-bold tracking-tight text-slate-900 dark:text-slate-100">{html.escape(title)}</h1>'
+        '<div class="mt-4 mb-16"><div class="text-gray-500 dark:text-gray-300 text-sm flex items-center flex-wrap gap-y-2">'
+        f'<span class=mr-1>{html.escape(year_or_date)}</span>{authors_block}'
+        '<span class=mx-1>·</span> <span class=mx-1>0 min read</span></div>'
+        f'{publication_detail_top_links(pub)}</div>'
+        '<div class="max-w-prose grid grid-cols-1 md:grid-cols-[200px_auto] gap-4 my-6">'
+        f'<div class="font-bold text-2xl">Type</div><div>{publication_detail_type_html(pub)}</div>'
+        f'<div class="font-bold text-2xl">Publication</div><div><em>{html.escape(venue_value)}</em></div></div>'
+        '<div class="prose prose-slate lg:prose-xl dark:prose-invert"></div>'
+        '<time class="mt-12 mb-8 block text-xs text-gray-500 ltr:text-right rtl:text-left dark:text-gray-400"'
+        f'{datetime_attr}><span>Publication date</span>\n{html.escape(display_date)}</time>'
+        + publication_detail_share_html(pub)
+        + "</main></article></div></div>"
+    )
+
+
+def ensure_selected_publication_detail_pages() -> None:
+    """Create local detail pages for curated selected publications without cite.bib folders."""
+    for pub in selected_publication_records():
+        slug = str(pub.get("slug") or "")
+        if not slug:
+            continue
+        folder = ROOT / "publication" / slug
+        if (folder / ("cite" + ".bib")).exists():
+            continue
+        make_page_from_template(
+            "publication/xi-2023-mechanism/index.html",
+            f"publication/{slug}/index.html",
+            f"{pub['title']} | Junke Jiang",
+            f"Publication record for {pub['title']}.",
+            f"/publication/{slug}/",
+            publication_detail_body(pub),
+        )
+        output_path = f"publication/{slug}/index.html"
+        write(output_path, update_publication_structured_metadata(read(output_path), pub))
+
+
+def normalize_curated_local_publication_detail_pages() -> None:
+    """Rebuild manually restored local publications from the normal detail-page wrapper."""
+    records = {str(record.get("slug") or ""): record for record in publication_records(include_selected=True)}
+    for slug in sorted(CURATED_LOCAL_PUBLICATION_SLUGS):
+        pub = records.get(slug)
+        if not pub:
+            continue
+        make_page_from_template(
+            "publication/xi-2023-mechanism/index.html",
+            f"publication/{slug}/index.html",
+            f"{pub['title']} | Junke Jiang",
+            f"Publication record for {pub['title']}.",
+            f"/publication/{slug}/",
+            publication_detail_body(pub),
+        )
+        output_path = f"publication/{slug}/index.html"
+        write(output_path, update_publication_structured_metadata(read(output_path), pub))
 
 
 def archive_items() -> list[dict[str, object]]:
@@ -588,7 +905,7 @@ def archive_items() -> list[dict[str, object]]:
         year = metadata.get("displayed_publication_year") or bib_field(text, "year")
         if not title or title.lower().startswith("an example"):
             continue
-        venue = bib_field(text, "journal") or bib_field(text, "booktitle") or bib_field(text, "publisher")
+        venue = publication_venue_from_bib(text, metadata)
         authors = format_authors(bib_field(text, "author"))
         metadata_url = normalize_resource_url(metadata.get("doi_found_in_page", ""))
         bib_doi = normalize_resource_url(bib_field(text, "doi"))
@@ -597,6 +914,7 @@ def archive_items() -> list[dict[str, object]]:
         official_url = metadata.get("official_url") or (metadata_url if metadata_url and not is_doi_url(metadata_url) else "")
         abstract = metadata.get("abstract") or bib_field(text, "abstract")
         tags = infer_tags(title, venue)
+        is_thesis = slug in THESIS_SLUGS or "thesis" in (metadata.get("status") or "").lower()
         links: list[tuple[str, str]] = []
         if doi:
             links.append(("DOI", doi))
@@ -620,6 +938,7 @@ def archive_items() -> list[dict[str, object]]:
                 "summary": conservative_summary(title, tags) or abstract_excerpt(abstract),
                 "tags": tags,
                 "topic": primary_topic(tags),
+                "publication_type": "PhD thesis" if is_thesis else "Journal article",
                 "links": links,
                 "selected": False,
             }
@@ -628,6 +947,10 @@ def archive_items() -> list[dict[str, object]]:
         apply_manual_thumbnail(record, assets_by_slug)
         records.append(record)
     return sorted(records, key=lambda item: (str(item["year"]), str(item["title"]).lower()), reverse=True)
+
+
+def is_thesis_record(pub: dict[str, object]) -> bool:
+    return str(pub.get("slug") or "") in THESIS_SLUGS or str(pub.get("publication_type") or "").lower() in {"phd thesis", "thesis"}
 
 
 def publication_records(include_selected: bool = False) -> list[dict[str, object]]:
@@ -649,11 +972,15 @@ def publication_thumbnail(pub: dict[str, object]) -> str:
     code = TOPIC_CODES.get(topic, "MAT")
     label = html.escape(topic)
     image_path = str(pub.get("thumbnail") or PUBLICATION_FALLBACK_THUMB)
-    status = "real" if pub.get("thumbnail") else "fallback"
+    status = str(pub.get("thumbnail_status") or ("real" if pub.get("thumbnail") else "fallback"))
+    image_type = str(pub.get("image_type") or ("fallback" if status != "real" else "toc"))
+    alt = f'Publication thumbnail for {html.escape(str(pub.get("title") or ""))}' if status == "real" else ""
+    code_html = f'<span>{html.escape(code)}</span>' if status != "real" else ""
     return (
-        f'<div class="jp-pub-thumb jp-pub-thumb--{klass}" data-image-status="{status}" aria-label="{label} visual marker">'
-        f'<img src="{html.escape(image_path)}" alt="" loading="lazy">'
-        f'<span>{html.escape(code)}</span></div>'
+        f'<div class="jp-pub-thumb jp-pub-thumb--{klass}" data-image-status="{html.escape(status)}" '
+        f'data-image-type="{html.escape(image_type)}" aria-label="{label} visual marker">'
+        f'<img src="{html.escape(image_path)}" alt="{alt}" loading="lazy">'
+        f'{code_html}</div>'
     )
 
 
@@ -691,12 +1018,13 @@ def publication_card(pub: dict[str, object], featured: bool = False) -> str:
     summary = str(pub.get("summary") or "")
     summary_html = f'<p class="jp-pub-summary">{html.escape(summary)}</p>' if summary else ""
     selected_badge = '<span class="jp-pub-badge">Selected</span>' if featured else ""
+    type_badge = '<span class="jp-pub-badge jp-pub-badge--thesis">Thesis</span>' if is_thesis_record(pub) else ""
     display_date = publication_date_display(pub) or "Year TBC"
     return (
         f'<article class="jp-pub-card{" jp-pub-card--featured" if featured else ""}" id="pub-{html.escape(str(pub.get("slug") or anchor_id(str(pub["title"]))))}">'
         f'{publication_thumbnail(pub)}'
         '<div class="jp-pub-content">'
-        f'<div class="jp-pub-meta"><span>{html.escape(display_date)}</span>{selected_badge}</div>'
+        f'<div class="jp-pub-meta"><span>{html.escape(display_date)}</span>{selected_badge}{type_badge}</div>'
         f'<h3>{title_link}</h3>'
         f'<p class="jp-pub-authors">{html.escape(str(pub.get("authors") or ""))}</p>'
         f'<p class="jp-pub-venue">{html.escape(venue_line)}</p>'
@@ -737,7 +1065,7 @@ def tag_counts(records: list[dict[str, object]]) -> dict[str, int]:
     return dict(sorted(counts.items(), key=lambda item: (-item[1], item[0])))
 
 
-def publications_sidebar(records: list[dict[str, object]]) -> str:
+def publications_sidebar(records: list[dict[str, object]], has_theses: bool = False) -> str:
     years = grouped_by_year(records)
     topics = topic_counts(records)
     year_links = "".join(
@@ -746,11 +1074,13 @@ def publications_sidebar(records: list[dict[str, object]]) -> str:
     topic_links = "".join(
         f'<a href="#topic-{anchor_id(topic)}">{html.escape(topic)}</a>' for topic in topics
     )
+    thesis_link = '<a href="#thesis">Thesis</a>' if has_theses else ""
     return (
         '<aside class="jp-pub-sidebar" aria-label="Publication navigation">'
         '<nav>'
         '<a href="#overview">Overview</a>'
         '<a href="#selected-publications">Selected Publications</a>'
+        f'{thesis_link}'
         '<a href="#publication-archive">Publication Archive</a>'
         '<a href="#data-parameters">Data / Parameters</a>'
         '<a href="#related-publications">You May Also Be Interested In</a>'
@@ -846,6 +1176,22 @@ def related_block(pub: dict[str, object], records: list[dict[str, object]]) -> s
     )
 
 
+def abstract_block(pub: dict[str, object]) -> str:
+    abstract = html.unescape(str(pub.get("abstract") or "")).strip()
+    abstract = re.sub(r"^Abstract\s*:?\s*", "", abstract, flags=re.I)
+    if not abstract:
+        return ""
+    paragraphs = [part.strip() for part in re.split(r"\n\s*\n", abstract) if part.strip()]
+    if not paragraphs:
+        paragraphs = [re.sub(r"\s+", " ", abstract)]
+    rendered = "".join(f"<p>{html.escape(paragraph)}</p>" for paragraph in paragraphs)
+    return (
+        '<section class="jp-publication-abstract" aria-labelledby="publication-abstract-heading">'
+        '<h2 id="publication-abstract-heading">Abstract</h2>'
+        f'{rendered}</section>'
+    )
+
+
 def publication_detail_enrichment_block(pub: dict[str, object]) -> str:
     image = publication_thumbnail(pub)
     links = publication_links_html({**pub, "href": ""})
@@ -853,18 +1199,20 @@ def publication_detail_enrichment_block(pub: dict[str, object]) -> str:
     date_note = ""
     if date and pub.get("date_source"):
         date_note = f'<p class="jp-detail-date-note">Date source: {html.escape(str(pub["date_source"]))}.</p>'
+    abstract_html = abstract_block(pub)
     return (
         '<section class="jp-publication-detail-card" aria-label="Publication resources">'
         f'{image}<div><h2>Publication Resources</h2>'
         f'{date_note}{links}</div></section>'
+        f'{abstract_html}'
     )
 
 
 def apply_publication_detail_date(s: str, pub: dict[str, object]) -> str:
     if pub.get("date_precision") != "day":
         return s
-    iso = str(pub.get("publication_date") or "")
-    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", iso):
+    iso = publication_date_iso(pub)
+    if not iso:
         return s
     display = publication_date_display(pub)
     year = iso[:4]
@@ -899,15 +1247,38 @@ def apply_publication_detail_date(s: str, pub: dict[str, object]) -> str:
     return s
 
 
+def apply_publication_detail_type(s: str, pub: dict[str, object]) -> str:
+    if not is_thesis_record(pub):
+        return s
+    return re.sub(
+        r'(<div class="font-bold text-2xl">Type</div>)<div>.*?</div>',
+        r'\1<div>PhD thesis</div>',
+        s,
+        count=1,
+        flags=re.S,
+    )
+
+
 def write_publication_assets_review(records: list[dict[str, object]]) -> None:
-    fields = ["slug", "title", "thumbnail_path", "thumbnail_status", "topic", "manual_action"]
+    existing_rows = publication_assets_by_slug()
+    fields = ["slug", "title", "thumbnail_path", "thumbnail_status", "topic", "image_type", "manual_action"]
     with PUBLICATION_ASSETS_REVIEW_CSV.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=fields)
         writer.writeheader()
         for record in records:
             slug = str(record.get("slug") or anchor_id(str(record.get("title", ""))))
+            existing = existing_rows.get(slug, {})
             thumbnail = str(record.get("thumbnail") or PUBLICATION_FALLBACK_THUMB)
-            status = "real" if record.get("thumbnail") else "fallback"
+            status = str(record.get("thumbnail_status") or ("real" if record.get("thumbnail") else "fallback"))
+            if status == "real" and not (ROOT / thumbnail.lstrip("/")).exists():
+                thumbnail = PUBLICATION_FALLBACK_THUMB
+                status = "fallback"
+            image_type = str(record.get("image_type") or existing.get("image_type") or ("fallback" if status != "real" else "toc"))
+            if status != "real":
+                image_type = "fallback"
+            manual_action = existing.get("manual_action", "")
+            if status != "real":
+                manual_action = "Replace with a verified TOC/graphical abstract if available."
             writer.writerow(
                 {
                     "slug": slug,
@@ -915,7 +1286,8 @@ def write_publication_assets_review(records: list[dict[str, object]]) -> None:
                     "thumbnail_path": thumbnail,
                     "thumbnail_status": status,
                     "topic": str(record.get("topic", "")),
-                    "manual_action": "" if status == "real" else "Replace with a verified TOC/graphical abstract if available.",
+                    "image_type": image_type,
+                    "manual_action": manual_action,
                 }
             )
 
@@ -947,6 +1319,53 @@ def social_links_html() -> str:
         f'<a class="jp-social-link" href="{url}" target="_blank" rel="noopener" aria-label="{label} profile">{icon}<span>{label}</span></a>'
         for label, url, icon in links
     ) + "</div>"
+
+
+RESEARCH_DIRECTIONS = [
+    {
+        "image": "/media/research/materials-design.png",
+        "alt": "Hybrid semiconductor models",
+        "title": "Grain-Boundary Defects and Machine-Learning Force Fields",
+        "description": "At York, I work on defect dynamics at grain boundaries in hybrid semiconductors and on developing machine-learning force fields for realistic, large-scale simulations.",
+        "tags": ["Defect dynamics", "ML potentials", "Hybrid semiconductors"],
+    },
+    {
+        "image": "/media/research/energy-materials.png",
+        "alt": "Perovskite stability",
+        "title": "Perovskite Stability, Phase Transitions, and Formation",
+        "description": "I study the mechanisms that control phase stability, crystallization, solvent effects, and morphology in metal-halide perovskites using DFT and ab initio molecular dynamics.",
+        "tags": ["DFT", "AIMD", "Crystallization"],
+    },
+    {
+        "image": "/media/research/electronic-structure.png",
+        "alt": "Electronic structure methods",
+        "title": "Efficient Electronic-Structure Methods",
+        "description": "A major direction is the development and validation of DFTB parameters for large periodic and non-periodic perovskite systems, including 3D, 2D, and heterostructured iodide perovskites.",
+        "tags": ["DFTB", "Electronic structure", "Large-scale simulation"],
+    },
+    {
+        "image": "/media/research/semiconductor-devices.png",
+        "alt": "Semiconductor device modelling",
+        "title": "Optoelectronic and Dielectric Properties",
+        "description": "I use atomistic modelling to understand layered perovskites, quantum dots, dopants, surfaces, interfaces, and device-relevant behavior for photovoltaics and light-emitting applications.",
+        "tags": ["PV", "LED", "Interfaces"],
+    },
+]
+
+
+def research_direction_cards() -> str:
+    cards = []
+    for direction in RESEARCH_DIRECTIONS:
+        tag_html = "".join(f'<span class="jp-tag">{html.escape(tag)}</span>' for tag in direction["tags"])
+        cards.append(
+            '<article class="jp-card jp-research-card">'
+            f'<img src="{html.escape(direction["image"])}" alt="{html.escape(direction["alt"])}">'
+            f'<h3>{html.escape(direction["title"])}</h3>'
+            f'<p>{html.escape(direction["description"])}</p>'
+            f'<div class="jp-tag-row">{tag_html}</div>'
+            "</article>"
+        )
+    return "".join(cards)
 
 
 def home_body() -> str:
@@ -993,12 +1412,13 @@ def home_body() -> str:
 </section>
 <section class="jp-section jp-section--soft">
   <div class="jp-container">
-    <h2 class="jp-heading">Research Areas</h2>
-    <p class="jp-lead">These themes form the basis of an independent research program that can later expand into project, resource, and team pages as opportunities grow.</p>
-    <div class="jp-grid">
-      <article class="jp-card"><img src="/media/research/energy-materials.png" alt="Perovskite materials"><h3>Perovskite Stability and Formation</h3><p>Phase transitions, crystallization pathways, solvent-precursor coordination, and the atomistic origins of instability in lead-halide and lead-free perovskites.</p></article>
-      <article class="jp-card"><img src="/media/research/electronic-structure.png" alt="Electronic structure modelling"><h3>Electronic-Structure Methods</h3><p>Efficient DFTB parameterization and electronic-structure prediction for 3D, 2D, and heterostructured iodide perovskites.</p></article>
-      <article class="jp-card"><img src="/media/research/materials-design.png" alt="Materials design"><h3>Defects, Dopants, and Interfaces</h3><p>Surface engineering, ligand interactions, dopant effects, and grain-boundary defect dynamics in quantum dots and hybrid semiconductor materials.</p></article>
+    <h2 class="jp-heading">Research Directions</h2>
+    <p class="jp-lead">My work combines electronic-structure theory, atomistic dynamics, and data-driven simulation to understand hybrid semiconductors and metal-halide perovskites across structure, stability, and optoelectronic response.</p>
+    <div class="jp-grid jp-grid--two">
+      {research_direction_cards()}
+    </div>
+    <div class="jp-link-list">
+      <a class="jp-button" href="/research/">Explore research</a>
     </div>
   </div>
 </section>
@@ -1043,7 +1463,7 @@ def home_body() -> str:
 
 
 def research_body() -> str:
-    return '''<div class="page-body jp-page">
+    return f'''<div class="page-body jp-page">
 <section class="jp-hero">
   <div class="jp-container">
     <p class="jp-kicker">Research</p>
@@ -1053,10 +1473,7 @@ def research_body() -> str:
 </section>
 <section class="jp-section">
   <div class="jp-container jp-grid jp-grid--two">
-    <article class="jp-card"><img src="/media/research/materials-design.png" alt="Hybrid semiconductor models"><h3>Grain-Boundary Defects and Machine-Learning Force Fields</h3><p>At York, I work on defect dynamics at grain boundaries in hybrid semiconductors and on developing machine-learning force fields for realistic, large-scale simulations.</p><div class="jp-tag-row"><span class="jp-tag">Defect dynamics</span><span class="jp-tag">ML potentials</span><span class="jp-tag">Hybrid semiconductors</span></div></article>
-    <article class="jp-card"><img src="/media/research/energy-materials.png" alt="Perovskite stability"><h3>Perovskite Stability, Phase Transitions, and Formation</h3><p>I study the mechanisms that control phase stability, crystallization, solvent effects, and morphology in metal-halide perovskites using DFT and ab initio molecular dynamics.</p><div class="jp-tag-row"><span class="jp-tag">DFT</span><span class="jp-tag">AIMD</span><span class="jp-tag">Crystallization</span></div></article>
-    <article class="jp-card"><img src="/media/research/electronic-structure.png" alt="Electronic structure methods"><h3>Efficient Electronic-Structure Methods</h3><p>A major direction is the development and validation of DFTB parameters for large periodic and non-periodic perovskite systems, including 3D, 2D, and heterostructured iodide perovskites.</p><div class="jp-tag-row"><span class="jp-tag">DFTB</span><span class="jp-tag">Electronic structure</span><span class="jp-tag">Large-scale simulation</span></div></article>
-    <article class="jp-card"><img src="/media/research/semiconductor-devices.png" alt="Semiconductor device modelling"><h3>Optoelectronic and Dielectric Properties</h3><p>I use atomistic modelling to understand layered perovskites, quantum dots, dopants, surfaces, interfaces, and device-relevant behavior for photovoltaics and light-emitting applications.</p><div class="jp-tag-row"><span class="jp-tag">PV</span><span class="jp-tag">LED</span><span class="jp-tag">Interfaces</span></div></article>
+    {research_direction_cards()}
   </div>
 </section>
 <section class="jp-section jp-section--soft">
@@ -1189,12 +1606,63 @@ def bib_field(text: str, name: str) -> str:
     return value.strip("{} ")
 
 
+def clean_bib_value(value: str) -> str:
+    value = value.replace("{", "").replace("}", "")
+    value = value.replace("\\&", "&")
+    value = value.replace("--", "-")
+    value = re.sub(r"\s+", " ", value).strip()
+    return value
+
+
+def publication_venue_from_bib(text: str, metadata: dict[str, str]) -> str:
+    """Return the richest reliable venue/citation string available locally."""
+    venue = clean_bib_value(bib_field(text, "journal") or bib_field(text, "booktitle") or bib_field(text, "publisher"))
+    if not venue:
+        return ""
+    year = clean_bib_value(metadata.get("displayed_publication_year") or bib_field(text, "year"))
+    volume = clean_bib_value(bib_field(text, "volume"))
+    number = clean_bib_value(bib_field(text, "number"))
+    pages = clean_bib_value(
+        bib_field(text, "pages")
+        or bib_field(text, "article-number")
+        or bib_field(text, "articleno")
+        or bib_field(text, "eid")
+        or bib_field(text, "eprint")
+    )
+    parts = [venue]
+    if year and year not in venue:
+        parts.append(year)
+    if volume:
+        parts.append(f"{volume}({number})" if number else volume)
+    if pages and pages not in parts:
+        parts.append(pages)
+    return ", ".join(parts)
+
+
+def apply_publication_detail_venue(s: str, pub: dict[str, object]) -> str:
+    venue = str(pub.get("venue") or "").strip()
+    if not venue:
+        return s
+    pattern = re.compile(
+        r'(<div class="font-bold text-2xl">Publication</div>)<div><em>.*?</em></div>',
+        flags=re.S,
+    )
+    return pattern.sub(
+        lambda match: match.group(1) + f"<div><em>{html.escape(venue)}</em></div>",
+        s,
+        count=1,
+    )
+
+
 def publication_body() -> str:
-    archive = publication_records(include_selected=True)
+    all_records = publication_records(include_selected=True)
+    theses = [record for record in all_records if is_thesis_record(record)]
+    archive = [record for record in all_records if not is_thesis_record(record)]
     selected_records = selected_publication_records()
     selected_html = "".join(publication_card(record, featured=True) for record in selected_records)
     archive_html = archive_sections_html(archive)
-    sidebar = publications_sidebar(archive)
+    thesis_html = "".join(publication_card(record) for record in theses)
+    sidebar = publications_sidebar(archive, has_theses=bool(theses))
     topic_html = topic_overview_html(archive)
     tag_html = tag_cloud_html(archive)
     related_seed = next((record for record in archive if record.get("slug") == "jiang-2025-flexible"), archive[0] if archive else {})
@@ -1216,16 +1684,21 @@ def publication_body() -> str:
         <h2 class="jp-heading">Overview</h2>
         <p class="jp-lead">This portfolio spans metal-halide perovskites, electronic-structure methods, interfaces, defects, low-dimensional materials, and optoelectronic applications.</p>
         <div class="jp-pub-stat-grid">
-          <div><strong>{len(archive)}</strong><span>publication records</span></div>
+          <div><strong>{len(all_records)}</strong><span>publication records</span></div>
           <div><strong>{len(topic_counts(archive))}</strong><span>active topics</span></div>
-          <div><strong>{sum(1 for record in archive if record.get("doi"))}</strong><span>DOI links</span></div>
-          <div><strong>{sum(1 for record in archive if record.get("date_precision") == "day")}</strong><span>exact dates</span></div>
+          <div><strong>{sum(1 for record in all_records if record.get("doi"))}</strong><span>DOI links</span></div>
+          <div><strong>{sum(1 for record in all_records if record.get("date_precision") == "day")}</strong><span>exact dates</span></div>
         </div>
       </section>
       <section id="selected-publications" class="jp-pub-section">
         <h2 class="jp-heading">Selected Publications</h2>
         <div class="jp-pub-card-list jp-pub-card-list--selected">{selected_html}</div>
         <p class="jp-note"># Equal contribution. * Corresponding author. For current citation metrics, please consult Google Scholar.</p>
+      </section>
+      <section id="thesis" class="jp-pub-section">
+        <h2 class="jp-heading">Thesis</h2>
+        <p class="jp-lead">Doctoral thesis listed separately from peer-reviewed journal articles.</p>
+        <div class="jp-pub-card-list">{thesis_html}</div>
       </section>
       <section id="data-parameters" class="jp-pub-section jp-resource-panel">
         <h2 class="jp-heading">Data / Parameters</h2>
@@ -1297,6 +1770,8 @@ def cleanup_generated_outputs() -> None:
             continue
         s = path.read_text(encoding="utf-8", errors="ignore")
         s = remove_public_citation_links(s)
+        s = remove_removed_publication_references(s)
+        s = normalize_site_icons(s)
         s = re.sub(r'<script src="/livereload\.js\?[^"]*"[^>]*></script>\s*', "", s)
         s = s.replace('href="/uploads/resume.pdf"', 'href="/uploads/resume.pdf"')
         s = s.replace(OLD_TITLE, CURRENT_TITLE)
@@ -1412,6 +1887,50 @@ def filter_publication_feed(s: str) -> str:
     return re.sub(r"<item>.*?</item>", keep_or_drop, s, flags=re.S)
 
 
+def publication_feed_item(pub: dict[str, object]) -> str:
+    url = f"{SITE_URL}{pub['href']}"
+    description = str(pub.get("summary") or abstract_excerpt(str(pub.get("abstract") or "")) or "")
+    return (
+        "<item>"
+        f"<title>{html.escape(str(pub['title']))}</title>"
+        f"<link>{html.escape(url)}</link>"
+        f"<guid>{html.escape(url)}</guid>"
+        f"<description>{html.escape(description)}</description>"
+        "</item>"
+    )
+
+
+def publication_page_exists(pub: dict[str, object]) -> bool:
+    href = str(pub.get("href") or "")
+    if not href:
+        return False
+    page_path = ROOT / href.lstrip("/") / "index.html"
+    return page_path.exists()
+
+
+def sync_publication_feed_entries() -> None:
+    path = ROOT / "publication" / "index.xml"
+    if not path.exists():
+        return
+    s = filter_publication_feed(path.read_text(encoding="utf-8"))
+    existing = set(re.findall(r"<link>(https://junkejiang\.com/publication/[^<]+)</link>", s))
+    missing = []
+    for pub in publication_records(include_selected=True):
+        if not publication_page_exists(pub):
+            continue
+        url = f"{SITE_URL}{pub['href']}"
+        if url not in existing:
+            missing.append(pub)
+            existing.add(url)
+    if missing:
+        insertion = "".join(publication_feed_item(pub) for pub in missing)
+        if "</image>" in s:
+            s = s.replace("</image>", "</image>" + insertion, 1)
+        else:
+            s = s.replace("</channel>", insertion + "</channel>", 1)
+    path.write_text(s, encoding="utf-8")
+
+
 def normalize_publication_sitemap_date_placeholders(s: str) -> str:
     def clean_url(match: re.Match[str]) -> str:
         url = match.group(0)
@@ -1439,6 +1958,33 @@ def filter_publication_sitemap(s: str) -> str:
     return re.sub(r"<url>.*?</url>", keep_or_drop, s, flags=re.S)
 
 
+def sync_publication_sitemap_entries() -> None:
+    path = ROOT / "sitemap.xml"
+    if not path.exists():
+        return
+    s = filter_publication_sitemap(path.read_text(encoding="utf-8"))
+    existing = set(re.findall(r"<loc>(https://junkejiang\.com/publication/[^<]+)</loc>", s))
+    entries = []
+    for pub in publication_records(include_selected=True):
+        if not publication_page_exists(pub):
+            continue
+        url = f"{SITE_URL}{pub['href']}"
+        if url in existing:
+            continue
+        existing.add(url)
+        entries.append(
+            f"<url><loc>{html.escape(url)}</loc><changefreq>weekly</changefreq></url>"
+        )
+    if entries:
+        s = s.replace("</urlset>", "".join(entries) + "</urlset>", 1)
+    path.write_text(s, encoding="utf-8")
+
+
+def sync_publication_xml_outputs() -> None:
+    sync_publication_feed_entries()
+    sync_publication_sitemap_entries()
+
+
 def remove_placeholder_publication_type_metadata(s: str) -> str:
     return re.sub(
         r'<meta property="og:updated_time" content="(?:19|20)\d{2}-01-01T00:00:00\+00:00">',
@@ -1457,7 +2003,7 @@ def remove_publication_last_updated_block(s: str) -> str:
 
 
 def enrich_publication_detail_pages() -> None:
-    records = publication_records(include_selected=False)
+    records = publication_records(include_selected=True)
     by_slug = {str(record["slug"]): record for record in records if record.get("slug")}
     for path in (ROOT / "publication").glob("*/index.html"):
         if not path.exists():
@@ -1465,12 +2011,15 @@ def enrich_publication_detail_pages() -> None:
         s = path.read_text(encoding="utf-8", errors="ignore")
         s = re.sub(r'\s*<section class="jp-related-pubs".*?</section>', "", s, flags=re.S)
         s = re.sub(r'\s*<section class="jp-publication-detail-card".*?</section>', "", s, flags=re.S)
+        s = re.sub(r'\s*<section class="jp-publication-abstract".*?</section>', "", s, flags=re.S)
         slug = path.parent.name
         record = by_slug.get(slug)
         if not record:
             path.write_text(s, encoding="utf-8")
             continue
         s = apply_publication_detail_date(s, record)
+        s = apply_publication_detail_type(s, record)
+        s = apply_publication_detail_venue(s, record)
         detail_block = publication_detail_enrichment_block(record)
         block = related_block(record, records)
         combined = detail_block + block
@@ -1524,6 +2073,8 @@ def main() -> None:
         "/teaching/",
         teaching_body(),
     )
+    ensure_selected_publication_detail_pages()
+    normalize_curated_local_publication_detail_pages()
     update_page(
         "publication/index.html",
         "Publications | Junke Jiang",
@@ -1535,6 +2086,7 @@ def main() -> None:
     enrich_publication_detail_pages()
     cleanup_generated_outputs()
     update_sitemap()
+    sync_publication_xml_outputs()
 
 
 if __name__ == "__main__":

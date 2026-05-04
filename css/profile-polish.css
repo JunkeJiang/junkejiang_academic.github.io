@@ -275,6 +275,16 @@
   margin-bottom: 1rem;
 }
 
+.jp-research-card img {
+  aspect-ratio: 2 / 1;
+  object-fit: contain;
+  background: #f8fafc;
+}
+
+.dark .jp-research-card img {
+  background: #101827;
+}
+
 .jp-tag-row {
   display: flex;
   flex-wrap: wrap;
@@ -656,8 +666,9 @@
 
 .jp-pub-card {
   display: grid;
-  grid-template-columns: 132px minmax(0, 1fr);
+  grid-template-columns: 148px minmax(0, 1fr);
   gap: 1rem;
+  align-items: start;
   border: 1px solid #dbe4ee;
   border-radius: 8px;
   background: #fff;
@@ -677,8 +688,11 @@
   position: relative;
   display: grid;
   place-items: center;
+  align-self: start;
+  width: 100%;
   overflow: hidden;
-  min-height: 104px;
+  min-height: 138px;
+  aspect-ratio: 4 / 5;
   border-radius: 7px;
   background: linear-gradient(135deg, #0f766e, #0369a1);
   color: #fff;
@@ -692,6 +706,44 @@
   height: 100%;
   object-fit: cover;
   opacity: 0.72;
+}
+
+.jp-pub-thumb[data-image-status="real"] {
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: inherit;
+}
+
+.dark .jp-pub-thumb[data-image-status="real"] {
+  border-color: #334155;
+  background: #111827;
+}
+
+.jp-pub-thumb[data-image-status="real"] img {
+  object-fit: contain;
+  opacity: 1;
+  padding: 0.35rem;
+}
+
+.jp-pub-thumb[data-image-status="real"][data-image-type="journal_cover"] {
+  aspect-ratio: 1 / 1.414;
+  min-height: 200px;
+}
+
+.jp-pub-thumb[data-image-status="real"][data-image-type="journal_cover"] img {
+  padding: 0.4rem;
+}
+
+.jp-pub-thumb[data-image-status="real"][data-image-type="toc"],
+.jp-pub-thumb[data-image-status="real"][data-image-type="graphical_abstract"],
+.jp-pub-thumb[data-image-status="real"][data-image-type="highlighting_figure"] {
+  aspect-ratio: 4 / 3;
+  min-height: 132px;
+}
+
+.jp-pub-thumb[data-image-status="real"]::before,
+.jp-pub-thumb[data-image-status="real"]::after {
+  display: none;
 }
 
 .jp-pub-thumb::before,
@@ -757,6 +809,11 @@
   padding: 0.1rem 0.45rem;
   color: #0f766e;
   font-size: 0.75rem;
+}
+
+.jp-pub-badge--thesis {
+  background: #e0f2fe;
+  color: #0369a1;
 }
 
 .jp-pub-card h3 {
@@ -923,7 +980,7 @@
 
 .jp-publication-detail-card {
   display: grid;
-  grid-template-columns: 168px minmax(0, 1fr);
+  grid-template-columns: 190px minmax(0, 1fr);
   gap: 1rem;
   align-items: stretch;
   margin: 2rem 0;
@@ -939,7 +996,55 @@
 }
 
 .jp-publication-detail-card .jp-pub-thumb {
-  min-height: 118px;
+  min-height: 176px;
+}
+
+.jp-publication-page {
+  max-width: 920px;
+}
+
+.jp-publication-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin: 0 0 1.25rem;
+}
+
+.jp-publication-meta-grid div {
+  border: 1px solid #dbe4ee;
+  border-radius: 8px;
+  background: #fff;
+  padding: 0.85rem;
+}
+
+.dark .jp-publication-meta-grid div {
+  border-color: #243244;
+  background: #0f172a;
+}
+
+.jp-publication-meta-grid strong,
+.jp-publication-meta-grid span {
+  display: block;
+}
+
+.jp-publication-meta-grid strong {
+  margin-bottom: 0.3rem;
+  color: #0f172a;
+  font-size: 0.82rem;
+}
+
+.dark .jp-publication-meta-grid strong {
+  color: #f8fafc;
+}
+
+.jp-publication-meta-grid span {
+  color: #475569;
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.dark .jp-publication-meta-grid span {
+  color: #cbd5e1;
 }
 
 .jp-publication-detail-card h2 {
@@ -961,6 +1066,44 @@
 
 .dark .jp-detail-date-note {
   color: #94a3b8;
+}
+
+.jp-publication-abstract {
+  margin: 2rem 0;
+  border: 1px solid #dbe4ee;
+  border-radius: 8px;
+  background: #fff;
+  padding: 1.15rem;
+}
+
+.dark .jp-publication-abstract {
+  border-color: #243244;
+  background: #0f172a;
+}
+
+.jp-publication-abstract h2 {
+  margin: 0 0 0.75rem;
+  color: #0f172a;
+  font-size: 1.2rem;
+  line-height: 1.3;
+}
+
+.dark .jp-publication-abstract h2 {
+  color: #f8fafc;
+}
+
+.jp-publication-abstract p {
+  margin: 0;
+  color: #334155;
+  line-height: 1.7;
+}
+
+.jp-publication-abstract p + p {
+  margin-top: 0.85rem;
+}
+
+.dark .jp-publication-abstract p {
+  color: #cbd5e1;
 }
 
 .jp-related-grid {
@@ -1094,7 +1237,16 @@
   }
 
   .jp-pub-thumb {
-    min-height: 86px;
+    min-height: 178px;
+  }
+
+  .jp-pub-thumb[data-image-status="real"][data-image-type="journal_cover"] {
+    aspect-ratio: 4 / 3;
+    min-height: 220px;
+  }
+
+  .jp-publication-meta-grid {
+    grid-template-columns: 1fr;
   }
 
   .jp-pub-stat-grid {
