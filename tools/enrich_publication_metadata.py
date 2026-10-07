@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
-"""Build derived publication metadata from the reviewed local CSV.
+"""Fill missing date/URL metadata without replacing reviewed publication records.
 
-The input file, ``publication_date_review.csv``, remains the hand-reviewed
-source for which generated publication pages should stay in the archive. This
-helper adds DOI/Crossref date metadata where available and appends a few
-curated DFTB resource records that are intentionally retained even though they
-are not in the cleaned CSV.
+Once ``publication_metadata_enriched.csv`` exists, its records and values are
+authoritative. The older date-review CSV is used only for initial setup.
+Existing abstracts, including intentionally empty fields, remain untouched.
 
 Run from the repository root:
 
@@ -43,35 +41,14 @@ CURATED_EXTRA_ROWS = [
         "status": "Curated DFTB parameter paper retained for data/parameter links.",
     },
     {
-        "slug": "jiang-2024-flexible",
-        "title": "Flexible and Efficient Semi-Empirical DFTB methods for Electronic Structure Prediction of 3D, 2D Perovskites and Heterostructures",
-        "displayed_publication_year": "2024",
-        "doi_found_in_page": "",
-        "status": "Curated DFTB conference record retained for data/parameter context; exact date requires manual confirmation.",
-    },
-    {
-        "slug": "jiang-2023-flexible",
-        "title": "Flexible and Efficient Semi-Empirical DFTB methods for Electronic Structure Prediction of 3D, 2D and 3D/2D Halide Perovskites",
-        "displayed_publication_year": "2023",
-        "doi_found_in_page": "",
-        "status": "Curated DFTB conference record retained for data/parameter context; exact date requires manual confirmation.",
-    },
-    {
-        "slug": "thebaud-2024-extending",
-        "title": "Extending tight-binding models from bulk to layered halide perovskites",
-        "displayed_publication_year": "2024",
-        "doi_found_in_page": "",
-        "status": "Curated tight-binding conference record retained for data/parameter context; exact date requires manual confirmation.",
-    },
-    {
-        "slug": "selected-duan-2026-photostability",
+        "slug": "duan-2026-photostability",
         "title": "Structure and device-operando photostability of quasi-2D Ruddlesden-Popper perovskites: engineering the spacer cation matters",
         "displayed_publication_year": "2026",
         "doi_found_in_page": "https://doi.org/10.1021/acsenergylett.5c03228",
         "status": "Curated selected publication without a generated detail page.",
     },
     {
-        "slug": "selected-geng-2025-bidentate",
+        "slug": "geng-2025-bidentate",
         "title": "Bidentate pyridine passivators attaching trifluoromethyl substitute groups in varied positions for efficient carbon-based perovskite solar cells",
         "displayed_publication_year": "2025",
         "doi_found_in_page": "https://doi.org/10.1021/acsami.5c18690",
@@ -207,18 +184,37 @@ def enrich_row(row: dict[str, str]) -> dict[str, str]:
 
 
 def main() -> None:
-    if not SOURCE_CSV.exists():
-        raise SystemExit(f"Missing input CSV: {SOURCE_CSV}")
-    rows = list(csv.DictReader(SOURCE_CSV.open(encoding="utf-8-sig")))
-    seen = {row["slug"] for row in rows}
-    for row in CURATED_EXTRA_ROWS:
-        if row["slug"] not in seen:
-            rows.append(row)
-            seen.add(row["slug"])
-
-    enriched = [enrich_row(row) for row in rows]
+    source = OUTPUT_CSV if OUTPUT_CSV.exists() else SOURCE_CSV
+    if not source.exists():
+        raise SystemExit(f"Missing input CSV: {source}")
+    with source.open(encoding="utf-8-sig", newline="") as handle:
+        reader = csv.DictReader(handle)
+        fields = list(reader.fieldnames or [])
+        rows = list(reader)
+    if source == OUTPUT_CSV:
+        enriched = []
+        for row in rows:
+            missing = [field for field in ("official_url", "publication_date", "date_precision", "date_source") if not row.get(field)]
+            merged = dict(row)
+            if missing:
+                candidate = enrich_row(row)
+                for field in missing:
+                    merged[field] = candidate.get(field, "")
+            enriched.append(merged)
+        if enriched == rows:
+            print(f"Preserved {len(rows)} reviewed rows; no missing date/URL fields to fill.")
+            return
+        fields.extend(field for field in OUTPUT_FIELDS if field not in fields)
+    else:
+        seen = {row["slug"] for row in rows}
+        for row in CURATED_EXTRA_ROWS:
+            if row["slug"] not in seen:
+                rows.append(row)
+                seen.add(row["slug"])
+        enriched = [enrich_row(row) for row in rows]
+        fields = OUTPUT_FIELDS
     with OUTPUT_CSV.open("w", encoding="utf-8", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=OUTPUT_FIELDS)
+        writer = csv.DictWriter(handle, fieldnames=fields)
         writer.writeheader()
         writer.writerows(enriched)
     print(f"Wrote {len(enriched)} rows to {OUTPUT_CSV.relative_to(ROOT)}")

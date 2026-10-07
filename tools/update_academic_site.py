@@ -4,8 +4,10 @@ import csv
 import html
 import json
 import re
+from datetime import datetime, timezone
+from email.utils import format_datetime
 from pathlib import Path
-from urllib.parse import quote, quote_plus
+from urllib.parse import quote, quote_plus, urlsplit
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -22,6 +24,7 @@ PUBLICATION_FALLBACK_THUMB = "/media/publications/fallback/publication-thumbnail
 SITE_ICON = "/media/icon_hu_645fa481986063ef.png"
 DFTB_GITHUB_RELEASES = "https://github.com/dftbparams/perov/releases"
 DFTB_ZENODO_RECORD = "https://zenodo.org/records/14778741"
+DFTB_BROMIDE_REPOSITORY = "https://github.com/JunkeJiang/perov"
 THESIS_SLUGS = {"jiang-2021-stabilizing"}
 CURATED_LOCAL_PUBLICATION_SLUGS = {
     "duan-2026-photostability",
@@ -186,6 +189,14 @@ def publication_html(pub: dict[str, str]) -> str:
 
 SELECTED_PUBLICATIONS = [
     {
+        "title": "Constructing density functional tight-binding parameters for electronic structure modeling of lead-bromide perovskites, perovskitoids, and related structures",
+        "authors": "Junke Jiang, Tammo van der Heide, Simon Thébaud, Carlos Raúl Lien-Medrano, Arnaud Fihey, Laurent Pedesseau, Claudio Quarti, Marios Zacharias, George Volonakis, Mikael Kepenekian, Bálint Aradi, Michael A. Sentef, Jacky Even, Claudine Katan",
+        "venue": "The Journal of Chemical Physics, 2026, 165(2), 024117",
+        "doi": "https://doi.org/10.1063/5.0324424",
+        "tags": ["DFTB", "Method Development", "Bromide Perovskites", "Electronic Structure", "Low-Dimensional Perovskites"],
+        "note": "Develops electronic DFTB parameters for lead-bromide perovskites and examines their transferability to mixed-halide compositions and structurally related low-dimensional materials.",
+    },
+    {
         "title": "Structure and Device-Operando Photostability of Quasi-2D Ruddlesden–Popper Perovskites: Engineering the Spacer Cation Matters",
         "authors": "Jianing Duan, Junke Jiang, Unsoo Kim, Jong Woo Lee, Yingguo Yang, Mansoo Choi, Zhaoxin Wu, Jun Xi",
         "venue": "ACS Energy Letters, 2026, 11(2), 1714-1723",
@@ -202,6 +213,7 @@ SELECTED_PUBLICATIONS = [
         "authors": "J. Jiang, T. van der Heide, S. Thébaud, C. R. Lien-Medrano, A. Fihey, L. Pedesseau, C. Quarti, M. Zacharias, G. Volonakis, M. Kepenekian, B. Aradi, M. A. Sentef, J. Even, C. Katan",
         "venue": "Physical Review Materials, 2025, 9, 023803",
         "doi": "https://doi.org/10.1103/PhysRevMaterials.9.023803",
+        "tags": ["DFTB", "Method Development", "2D Perovskites", "Iodide Perovskite", "Interfaces"],
         "note": "Develops efficient DFTB parameters for electronic-structure prediction in 3D and 2D iodide perovskites.",
     },
     {
@@ -304,6 +316,9 @@ TAG_PRIORITY = [
 
 TAG_TO_TOPIC = {
     "Perovskites": "Metal-Halide Perovskites",
+    "Iodide Perovskite": "Metal-Halide Perovskites",
+    "Bromide Perovskites": "Metal-Halide Perovskites",
+    "Low-Dimensional Perovskites": "2D and Layered Perovskites",
     "2D Perovskites": "2D and Layered Perovskites",
     "Defects": "Grain Boundaries and Defects",
     "Interfaces": "Interfaces and Heterostructures",
@@ -461,6 +476,9 @@ def apply_manual_thumbnail(record: dict[str, object], assets_by_slug: dict[str, 
     thumbnail_path = (asset.get("thumbnail_path") or "").strip()
     status = (asset.get("thumbnail_status") or "").strip().lower()
     image_type = (asset.get("image_type") or "").strip()
+    for field in ("image_credit", "image_source_url"):
+        if asset.get(field):
+            record[field] = asset[field]
     if image_type:
         record["image_type"] = image_type
     if status:
@@ -519,16 +537,63 @@ def publication_date_display(pub: dict[str, object]) -> str:
     return str(pub.get("year") or value)
 
 
+def publication_sort_key(pub: dict[str, object]) -> tuple[int, int, int, str, str]:
+    """Sort by the recorded date; zero parts mean unknown, not January 1."""
+    value = str(pub.get("publication_date") or "").strip()
+    year_text = str(pub.get("year") or (value if re.fullmatch(r"\d{4}", value) else ""))
+    year = int(year_text) if re.fullmatch(r"\d{4}", year_text) else 0
+    month = day = 0
+    precision = str(pub.get("date_precision") or "year")
+    if precision == "day":
+        iso = publication_date_iso(pub)
+        if iso:
+            try:
+                date = datetime.fromisoformat(iso)
+            except ValueError:
+                pass
+            else:
+                year, month, day = date.year, date.month, date.day
+    elif precision == "month" and re.fullmatch(r"\d{4}-\d{2}", value):
+        date_year, date_month = map(int, value.split("-"))
+        if date_year > 0 and 1 <= date_month <= 12:
+            year, month = date_year, date_month
+    return year, month, day, str(pub.get("title") or "").casefold(), str(pub.get("slug") or "")
+
+
 def dftb_resource_links(pub: dict[str, object]) -> list[tuple[str, str]]:
     slug = str(pub.get("slug") or "")
-    tags = set(str(tag) for tag in pub.get("tags", []))
-    title = str(pub.get("title") or "").lower()
-    if slug not in DFTB_RESOURCE_SLUGS and not ({"DFTB", "Method Development"} & tags and "perovsk" in title):
+    if slug == "jiang-2026-constructing":
+        return [("DFTB Parameters", DFTB_BROMIDE_REPOSITORY)]
+    # The verified releases and Zenodo record describe the iodide parameter paper.
+    if slug not in DFTB_RESOURCE_SLUGS:
         return []
     return [
         ("DFTB Parameters", DFTB_GITHUB_RELEASES),
         ("Zenodo Record", DFTB_ZENODO_RECORD),
     ]
+
+
+def publication_primary_links(pub: dict[str, object]) -> list[tuple[str, str]]:
+    """Use the DOI as the sole publisher link, retaining URLs as source metadata."""
+    doi = str(pub.get("doi") or "").strip()
+    if doi:
+        return [("DOI", doi)]
+    official_url = str(pub.get("official_url") or "").strip()
+    if not official_url:
+        return []
+    label = "Publication"
+    if is_thesis_record(pub):
+        label = "Thesis PDF" if urlsplit(official_url).path.lower().endswith(".pdf") else "Thesis"
+    return [(label, official_url)]
+
+
+def remove_article_page_buttons(s: str) -> str:
+    def clean_anchor(match: re.Match[str]) -> str:
+        label = html.unescape(re.sub(r"<[^>]+>", "", match.group(1)))
+        label = re.sub(r"\s+", " ", label).strip().casefold()
+        return "" if label == "article page" else match.group(0)
+
+    return re.sub(r"<a\b[^>]*>(.*?)</a>", clean_anchor, s, flags=re.I | re.S)
 
 
 def infer_tags(title: str, venue: str = "") -> list[str]:
@@ -625,7 +690,7 @@ def selected_publication_records() -> list[dict[str, object]]:
     for pub in SELECTED_PUBLICATIONS:
         venue = pub["venue"]
         year_match = re.search(r"\b((?:19|20)\d{2})\b", venue)
-        tags = infer_tags(pub["title"], venue)
+        tags = list(pub.get("tags") or infer_tags(pub["title"], venue))
         doi = normalize_resource_url(pub.get("doi", ""))
         metadata = metadata_by_doi.get(doi.lower(), {})
         slug = metadata.get("slug", "")
@@ -674,13 +739,7 @@ def publication_detail_authors_html(authors: str) -> str:
 
 
 def publication_detail_top_links(pub: dict[str, object]) -> str:
-    candidates: list[tuple[str, str]] = []
-    doi = str(pub.get("doi") or "").strip()
-    official_url = str(pub.get("official_url") or "").strip()
-    if doi:
-        candidates.append(("DOI", doi))
-    if official_url and not same_resource_url(official_url, doi):
-        candidates.append(("Article Page", official_url))
+    candidates = publication_primary_links(pub)
     if not candidates:
         return ""
     links = "".join(
@@ -847,14 +906,14 @@ def publication_detail_body(pub: dict[str, object]) -> str:
     )
 
 
-def ensure_selected_publication_detail_pages() -> None:
-    """Create local detail pages for curated selected publications without cite.bib folders."""
-    for pub in selected_publication_records():
+def ensure_publication_detail_pages() -> None:
+    """Create missing local pages for CSV-approved records using the normal wrapper."""
+    for pub in publication_records(include_selected=True):
         slug = str(pub.get("slug") or "")
         if not slug:
             continue
         folder = ROOT / "publication" / slug
-        if (folder / ("cite" + ".bib")).exists():
+        if (folder / "index.html").exists():
             continue
         make_page_from_template(
             "publication/xi-2023-mechanism/index.html",
@@ -913,13 +972,10 @@ def archive_items() -> list[dict[str, object]]:
         doi = next((url for url in (metadata_url, bib_doi, page_doi) if is_doi_url(url)), "")
         official_url = metadata.get("official_url") or (metadata_url if metadata_url and not is_doi_url(metadata_url) else "")
         abstract = metadata.get("abstract") or bib_field(text, "abstract")
-        tags = infer_tags(title, venue)
+        tags = [tag.strip() for tag in bib_field(text, "keywords").split(";") if tag.strip()] or infer_tags(title, venue)
+        curated_summary = bib_field(text, "summary")
         is_thesis = slug in THESIS_SLUGS or "thesis" in (metadata.get("status") or "").lower()
-        links: list[tuple[str, str]] = []
-        if doi:
-            links.append(("DOI", doi))
-        if official_url and not same_resource_url(official_url, doi):
-            links.append(("Article Page", official_url))
+        links = publication_primary_links({"slug": slug, "doi": doi, "official_url": official_url})
         links.extend(publication_pdf_links(slug))
         record = (
             {
@@ -935,7 +991,8 @@ def archive_items() -> list[dict[str, object]]:
                 "date_precision": metadata.get("date_precision", "year"),
                 "date_source": metadata.get("date_source", ""),
                 "abstract": abstract,
-                "summary": conservative_summary(title, tags) or abstract_excerpt(abstract),
+                "summary": curated_summary or conservative_summary(title, tags) or abstract_excerpt(abstract),
+                "curated_summary": curated_summary,
                 "tags": tags,
                 "topic": primary_topic(tags),
                 "publication_type": "PhD thesis" if is_thesis else "Journal article",
@@ -946,7 +1003,7 @@ def archive_items() -> list[dict[str, object]]:
         record["links"].extend(dftb_resource_links(record))
         apply_manual_thumbnail(record, assets_by_slug)
         records.append(record)
-    return sorted(records, key=lambda item: (str(item["year"]), str(item["title"]).lower()), reverse=True)
+    return sorted(records, key=publication_sort_key, reverse=True)
 
 
 def is_thesis_record(pub: dict[str, object]) -> bool:
@@ -963,7 +1020,7 @@ def publication_records(include_selected: bool = False) -> list[dict[str, object
         if key not in seen:
             records.append(record)
             seen.add(key)
-    return sorted(records, key=lambda item: (str(item["year"]), str(item["title"]).lower()), reverse=True)
+    return sorted(records, key=publication_sort_key, reverse=True)
 
 
 def publication_thumbnail(pub: dict[str, object]) -> str:
@@ -985,7 +1042,7 @@ def publication_thumbnail(pub: dict[str, object]) -> str:
 
 
 def publication_links_html(pub: dict[str, object]) -> str:
-    links = list(pub.get("links", []))
+    links = [(label, url) for label, url in pub.get("links", []) if str(label).strip().casefold() != "article page"]
     if pub.get("href"):
         links.insert(0, ("Details", str(pub["href"])))
     if not links:
@@ -1036,16 +1093,17 @@ def publication_card(pub: dict[str, object], featured: bool = False) -> str:
 
 
 def year_bucket(year: str) -> str:
-    if year in {"2026", "2025", "2024", "2023", "2022"}:
+    if year.isdigit() and int(year) >= 2022:
         return year
     return "2021 and before"
 
 
 def grouped_by_year(records: list[dict[str, object]]) -> dict[str, list[dict[str, object]]]:
-    groups = {label: [] for label in ["2026", "2025", "2024", "2023", "2022", "2021 and before"]}
-    for record in records:
-        groups.setdefault(year_bucket(str(record.get("year") or "")), []).append(record)
-    return {label: items for label, items in groups.items() if items}
+    groups: dict[str, list[dict[str, object]]] = {}
+    for record in sorted(records, key=publication_sort_key, reverse=True):
+        year = publication_sort_key(record)[0]
+        groups.setdefault(year_bucket(str(year)), []).append(record)
+    return groups
 
 
 def topic_counts(records: list[dict[str, object]]) -> dict[str, int]:
@@ -1158,6 +1216,16 @@ def related_publications_for(pub: dict[str, object], records: list[dict[str, obj
     return [item[-1] for item in scored[:limit]]
 
 
+def method_development_publications(records: list[dict[str, object]], limit: int = 4) -> list[dict[str, object]]:
+    """Require explicit method tags, not just general perovskite overlap."""
+    relevant = [
+        record for record in records
+        if not is_thesis_record(record)
+        and {"DFTB", "Method Development"}.intersection(record.get("tags", []))
+    ]
+    return sorted(relevant, key=publication_sort_key, reverse=True)[:limit]
+
+
 def related_block(pub: dict[str, object], records: list[dict[str, object]]) -> str:
     related = related_publications_for(pub, records)
     if not related:
@@ -1179,15 +1247,19 @@ def related_block(pub: dict[str, object], records: list[dict[str, object]]) -> s
 def abstract_block(pub: dict[str, object]) -> str:
     abstract = html.unescape(str(pub.get("abstract") or "")).strip()
     abstract = re.sub(r"^Abstract\s*:?\s*", "", abstract, flags=re.I)
+    heading = "Abstract"
     if not abstract:
-        return ""
+        abstract = str(pub.get("curated_summary") or "").strip()
+        if not abstract:
+            return ""
+        heading = "Summary"
     paragraphs = [part.strip() for part in re.split(r"\n\s*\n", abstract) if part.strip()]
     if not paragraphs:
         paragraphs = [re.sub(r"\s+", " ", abstract)]
     rendered = "".join(f"<p>{html.escape(paragraph)}</p>" for paragraph in paragraphs)
     return (
         '<section class="jp-publication-abstract" aria-labelledby="publication-abstract-heading">'
-        '<h2 id="publication-abstract-heading">Abstract</h2>'
+        f'<h2 id="publication-abstract-heading">{heading}</h2>'
         f'{rendered}</section>'
     )
 
@@ -1200,10 +1272,17 @@ def publication_detail_enrichment_block(pub: dict[str, object]) -> str:
     if date and pub.get("date_source"):
         date_note = f'<p class="jp-detail-date-note">Date source: {html.escape(str(pub["date_source"]))}.</p>'
     abstract_html = abstract_block(pub)
+    image_credit = ""
+    if pub.get("thumbnail_status") == "real" and pub.get("image_credit"):
+        image_credit = f'<p class="jp-note">{html.escape(str(pub["image_credit"]))}'
+        source = str(pub.get("image_source_url") or "")
+        if source.startswith("https://"):
+            image_credit += f' <a href="{html.escape(source, quote=True)}" target="_blank" rel="noopener">Image source</a>.'
+        image_credit += "</p>"
     return (
         '<section class="jp-publication-detail-card" aria-label="Publication resources">'
         f'{image}<div><h2>Publication Resources</h2>'
-        f'{date_note}{links}</div></section>'
+        f'{date_note}{links}{image_credit}</div></section>'
         f'{abstract_html}'
     )
 
@@ -1260,36 +1339,36 @@ def apply_publication_detail_type(s: str, pub: dict[str, object]) -> str:
 
 
 def write_publication_assets_review(records: list[dict[str, object]]) -> None:
+    """Merge new records without replacing reviewed values, columns, or row order."""
     existing_rows = publication_assets_by_slug()
     fields = ["slug", "title", "thumbnail_path", "thumbnail_status", "topic", "image_type", "manual_action"]
+    existing_fields = []
+    if PUBLICATION_ASSETS_REVIEW_CSV.exists():
+        with PUBLICATION_ASSETS_REVIEW_CSV.open(encoding="utf-8-sig", newline="") as handle:
+            existing_fields = list(csv.DictReader(handle).fieldnames or [])
+        fields = existing_fields + [field for field in fields if field not in existing_fields]
+    merged = {}
+    for record in records:
+        slug = str(record.get("slug") or anchor_id(str(record.get("title", ""))))
+        status = str(record.get("thumbnail_status") or ("real" if record.get("thumbnail") else "fallback"))
+        merged[slug] = {
+            "slug": slug,
+            "title": str(record.get("title", "")),
+            "thumbnail_path": str(record.get("thumbnail") or PUBLICATION_FALLBACK_THUMB),
+            "thumbnail_status": status,
+            "topic": str(record.get("topic", "")),
+            "image_type": str(record.get("image_type") or ("toc" if status == "real" else "fallback")),
+            "manual_action": "" if status == "real" else "Replace with a verified TOC/graphical abstract if available.",
+        }
+        merged[slug].update(existing_rows.get(slug, {}))
+    ordered_slugs = [slug for slug in existing_rows if slug in merged]
+    ordered_slugs.extend(slug for slug in merged if slug not in existing_rows)
+    if fields == existing_fields and [merged[slug] for slug in ordered_slugs] == list(existing_rows.values()):
+        return
     with PUBLICATION_ASSETS_REVIEW_CSV.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=fields)
         writer.writeheader()
-        for record in records:
-            slug = str(record.get("slug") or anchor_id(str(record.get("title", ""))))
-            existing = existing_rows.get(slug, {})
-            thumbnail = str(record.get("thumbnail") or PUBLICATION_FALLBACK_THUMB)
-            status = str(record.get("thumbnail_status") or ("real" if record.get("thumbnail") else "fallback"))
-            if status == "real" and not (ROOT / thumbnail.lstrip("/")).exists():
-                thumbnail = PUBLICATION_FALLBACK_THUMB
-                status = "fallback"
-            image_type = str(record.get("image_type") or existing.get("image_type") or ("fallback" if status != "real" else "toc"))
-            if status != "real":
-                image_type = "fallback"
-            manual_action = existing.get("manual_action", "")
-            if status != "real":
-                manual_action = "Replace with a verified TOC/graphical abstract if available."
-            writer.writerow(
-                {
-                    "slug": slug,
-                    "title": str(record.get("title", "")),
-                    "thumbnail_path": thumbnail,
-                    "thumbnail_status": status,
-                    "topic": str(record.get("topic", "")),
-                    "image_type": image_type,
-                    "manual_action": manual_action,
-                }
-            )
+        writer.writerows(merged[slug] for slug in ordered_slugs)
 
 
 def social_links_html() -> str:
@@ -1425,7 +1504,7 @@ def home_body() -> str:
 <section class="jp-section" id="papers">
   <div class="jp-container">
     <h2 class="jp-heading">Selected Publications</h2>
-    <p class="jp-lead">Representative publications from the latest CV are shown below. For the complete and most current publication record, please see the publications page and Google Scholar.</p>
+    <p class="jp-lead">Representative publications are shown below. For the complete and most current publication record, please see the publications page and Google Scholar.</p>
     {selected_publications(5)}
     <div class="jp-link-list">
       <a class="jp-button" href="/publication/">All publications</a>
@@ -1436,8 +1515,12 @@ def home_body() -> str:
 </section>
 <section class="jp-section jp-section--soft" id="news">
   <div class="jp-container">
-    <h2 class="jp-heading">Recent Highlights</h2>
+    <h2 class="jp-heading">News</h2>
     <ul class="jp-list">
+      <li><h3>October 2026</h3><p>Attended <a href="https://chasam.materialsmodeling.org/" target="_blank" rel="noopener">CHASAM 2026</a>, the Chalmers School on Atomic-scale Modeling in Gothenburg (28 September - 2 October), with hands-on training in neuroevolution potentials (NEP) and machine-learning interatomic potentials (MLIPs).</p></li>
+      <li><h3>September 2026</h3><p>Our collaborative study on <a href="/publication/dai-2026-all-perovskite/">all-perovskite low-dimensional/quantum-dot heterojunctions</a> is now published in <em>Nano Letters</em>. The work examines interface engineering to improve charge extraction and moisture stability in perovskite quantum-dot solar cells.</p></li>
+      <li><h3>July 2026</h3><p>Our paper on <a href="/publication/jiang-2026-constructing/">DFTB parameters for lead-bromide perovskites, perovskitoids, and related structures</a> is now published in <em>The Journal of Chemical Physics</em>. The study extends efficient electronic-structure modelling to bromide and mixed-halide systems.</p></li>
+      <li><h3>July 2026</h3><p>Presented my research at the <a href="https://www.sc.stfc.ac.uk/events/mcc-conference-2026/" target="_blank" rel="noopener">Materials Chemistry Consortium (MCC) Summer Conference</a> at STFC Daresbury Laboratory, held on 1-3 July 2026.</p></li>
       <li><h3>March 2026</h3><p>Joined the School of Physics, Engineering and Technology at the University of York as a Research Associate.</p></li>
       <li><h3>2026</h3><p>Co-first-author paper on device-operando photostability of quasi-2D Ruddlesden-Popper perovskites published in <em>ACS Energy Letters</em>.</p></li>
       <li><h3>2025</h3><p>Published DFTB parameters for electronic-structure prediction of iodide perovskites and heterostructures in <em>Physical Review Materials</em>.</p></li>
@@ -1665,8 +1748,7 @@ def publication_body() -> str:
     sidebar = publications_sidebar(archive, has_theses=bool(theses))
     topic_html = topic_overview_html(archive)
     tag_html = tag_cloud_html(archive)
-    related_seed = next((record for record in archive if record.get("slug") == "jiang-2025-flexible"), archive[0] if archive else {})
-    related_html = "".join(publication_card(record) for record in related_publications_for(related_seed, archive, limit=4)) if related_seed else ""
+    related_html = "".join(publication_card(record) for record in method_development_publications(archive))
     return f'''<div class="page-body jp-page">
 <section class="jp-hero">
   <div class="jp-container">
@@ -1704,7 +1786,8 @@ def publication_body() -> str:
         <h2 class="jp-heading">Data / Parameters</h2>
         <p class="jp-lead">Verified resource links are shown on DFTB method papers and collected here for convenience.</p>
         <div class="jp-resource-list">
-          <article><h3>DFTB and semiempirical perovskite parameters</h3><p>Parameter resources associated with the DFTB perovskite method-development papers.</p><div class="jp-pub-links"><a href="{DFTB_GITHUB_RELEASES}" target="_blank" rel="noopener">GitHub Releases</a><a href="{DFTB_ZENODO_RECORD}" target="_blank" rel="noopener">Zenodo Record</a><a href="#topic-dftb-and-method-development">View DFTB papers</a></div></article>
+          <article><h3>Lead-iodide perovskite DFTB parameters</h3><p>Resources associated with the 2025 Physical Review Materials parameter paper.</p><div class="jp-pub-links"><a href="{DFTB_GITHUB_RELEASES}" target="_blank" rel="noopener">GitHub Releases</a><a href="{DFTB_ZENODO_RECORD}" target="_blank" rel="noopener">Zenodo Record</a><a href="/publication/jiang-2025-flexible/">Publication</a></div></article>
+          <article><h3>Lead-bromide perovskite DFTB parameters</h3><p>Parameter repository associated with the 2026 Journal of Chemical Physics paper.</p><div class="jp-pub-links"><a href="{DFTB_BROMIDE_REPOSITORY}" target="_blank" rel="noopener">DFTB Parameters</a><a href="/publication/jiang-2026-constructing/">Publication</a></div></article>
         </div>
       </section>
       <section id="by-tag" class="jp-pub-section">
@@ -1722,7 +1805,7 @@ def publication_body() -> str:
       </section>
       <section id="publication-archive" class="jp-pub-section">
         <h2 class="jp-heading">Publication Archive</h2>
-        <p class="jp-lead">Compact cards preserve the generated publication pages, DOI links, venue metadata, research tags, and concise title-based summaries where appropriate.</p>
+        <p class="jp-lead">Publications are listed newest first by their recorded publication date, with venue citations, research tags, and available resources.</p>
         {archive_html}
       </section>
     </main>
@@ -1890,11 +1973,14 @@ def filter_publication_feed(s: str) -> str:
 def publication_feed_item(pub: dict[str, object]) -> str:
     url = f"{SITE_URL}{pub['href']}"
     description = str(pub.get("summary") or abstract_excerpt(str(pub.get("abstract") or "")) or "")
+    iso = publication_date_iso(pub) if pub.get("date_precision") == "day" else ""
+    date_html = f"<pubDate>{format_datetime(datetime.fromisoformat(iso).replace(tzinfo=timezone.utc))}</pubDate>" if iso else ""
     return (
         "<item>"
         f"<title>{html.escape(str(pub['title']))}</title>"
         f"<link>{html.escape(url)}</link>"
         f"<guid>{html.escape(url)}</guid>"
+        f"{date_html}"
         f"<description>{html.escape(description)}</description>"
         "</item>"
     )
@@ -2017,6 +2103,7 @@ def enrich_publication_detail_pages() -> None:
         if not record:
             path.write_text(s, encoding="utf-8")
             continue
+        s = remove_article_page_buttons(s)
         s = apply_publication_detail_date(s, record)
         s = apply_publication_detail_type(s, record)
         s = apply_publication_detail_venue(s, record)
@@ -2073,7 +2160,7 @@ def main() -> None:
         "/teaching/",
         teaching_body(),
     )
-    ensure_selected_publication_detail_pages()
+    ensure_publication_detail_pages()
     normalize_curated_local_publication_detail_pages()
     update_page(
         "publication/index.html",
