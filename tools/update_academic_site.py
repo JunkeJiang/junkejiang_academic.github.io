@@ -1604,7 +1604,7 @@ def cv_body() -> str:
     <div>
       <h2 class="jp-heading">Education</h2>
       <div class="jp-timeline">
-        <div class="jp-timeline-item"><div class="jp-date">2017-2021</div><div><h3>PhD in Applied Physics · Eindhoven University of Technology</h3><p>Supervisors: Dr. Shuxia Tao and Prof. Peter A. Bobbert.</p></div></div>
+        <div class="jp-timeline-item"><div class="jp-date">2017-2021</div><div><h3>PhD in Applied Physics · Eindhoven University of Technology</h3><p>Supervisors: Prof. Shuxia Tao and Prof. Peter A. Bobbert.</p></div></div>
         <div class="jp-timeline-item"><div class="jp-date">2014-2017</div><div><h3>MEng in Mechatronic Engineering · Guilin University of Electronic Technology</h3></div></div>
         <div class="jp-timeline-item"><div class="jp-date">2010-2014</div><div><h3>BEng in Microelectronics Manufacturing Engineering · Guilin University of Electronic Technology</h3></div></div>
       </div>
@@ -1613,7 +1613,7 @@ def cv_body() -> str:
       <h2 class="jp-heading">Skills</h2>
       <div class="jp-card">
         <h3>Theory and Simulation</h3>
-        <p>DFT, DFTB, molecular dynamics, DFT-1/2, solid-state physics, semiconductor physics.</p>
+        <p>DFT, DFTB, molecular dynamics, machine-learning interatomic potentials (MLIPs), DFT-1/2, solid-state physics, semiconductor physics.</p>
         <h3>Programming and Software</h3>
         <p>Python, Bash; DFTB+, SIESTA, VASP, CP2K, AMS, Materials Studio, Hefei-NAMD, Gaussian, QuantumATK, GNUplot, Chemdraw, ChemOffice, VMD.</p>
       </div>
