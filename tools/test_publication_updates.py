@@ -11,6 +11,45 @@ import update_academic_site as site
 
 
 class PublicationUpdateTests(unittest.TestCase):
+    def test_verified_author_roles_change_only_display_names(self):
+        record = {
+            "authors": "Shakeel Abbas, Wei Guo, Junke Jiang, Jinfei Dai",
+            "corresponding_authors": ["Junke Jiang"],
+            "equal_contributors": ["Shakeel Abbas", "Wei Guo"],
+        }
+        self.assertEqual(site.publication_authors_display(record), "Shakeel Abbas#, Wei Guo#, Junke Jiang*, Jinfei Dai")
+        self.assertEqual(record["authors"], "Shakeel Abbas, Wei Guo, Junke Jiang, Jinfei Dai")
+        self.assertEqual(site.publication_authors_display({"authors": "Existing Author*, Another Author#"}), "Existing Author*, Another Author#")
+
+    def test_small_paper_is_chronological_archive_only_with_verified_roles(self):
+        records = site.archive_items()
+        record = next(item for item in records if item["slug"] == "abbas-2026-managing")
+        self.assertEqual(records[0]["slug"], record["slug"])
+        self.assertFalse(record["selected"])
+        self.assertEqual(site.publication_date_iso(record), "2026-10-28")
+        self.assertEqual(record["venue"], "Small, 2026, e76430")
+        self.assertEqual(record["corresponding_authors"], ["Junke Jiang", "Xiaolong Yang", "Namyoung Ahn", "Jun Xi"])
+        self.assertEqual(record["equal_contributors"], ["Shakeel Abbas", "Wei Guo"])
+        self.assertNotIn("*", record["authors"])
+        self.assertNotIn("#", record["authors"])
+        self.assertNotIn(record["doi"], [item["doi"] for item in site.selected_publication_records()])
+        self.assertNotIn(record["title"], site.home_body())
+        card = site.publication_card(record)
+        detail = site.publication_detail_body(record)
+        resources = site.publication_detail_enrichment_block(record)
+        self.assertIn("Junke Jiang*", card)
+        self.assertIn("Junke Jiang*", detail)
+        self.assertNotIn("jp-pub-card--featured", card)
+        self.assertNotIn(">Selected</span>", card)
+        self.assertIn("* Corresponding authors: Junke Jiang, Xiaolong Yang, Namyoung Ahn, Jun Xi.", resources)
+        self.assertIn("# Equal contribution: Shakeel Abbas, Wei Guo.", resources)
+        self.assertIn(">Summary</h2>", resources)
+        self.assertNotIn(">Abstract</h2>", resources)
+        self.assertNotIn("Article Page", card + detail + resources)
+        self.assertEqual(record["thumbnail_status"], "fallback")
+        thumbnail = record.get("thumbnail") or site.PUBLICATION_FALLBACK_THUMB
+        self.assertTrue((site.ROOT / thumbnail.lstrip("/")).is_file())
+
     def test_asset_merge_preserves_reviewed_fields_and_custom_columns(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "assets.csv"

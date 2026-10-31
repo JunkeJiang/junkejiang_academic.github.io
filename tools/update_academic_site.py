@@ -723,6 +723,18 @@ def selected_publication_records() -> list[dict[str, object]]:
     return records
 
 
+def publication_authors_display(pub: dict[str, object]) -> str:
+    authors = str(pub.get("authors") or "")
+    corresponding = set(pub.get("corresponding_authors") or [])
+    equal = set(pub.get("equal_contributors") or [])
+    if not corresponding and not equal:
+        return authors
+    return ", ".join(
+        name + ("#" if name in equal else "") + ("*" if name in corresponding else "")
+        for name in (part.strip() for part in authors.split(",")) if name
+    )
+
+
 def publication_detail_authors_html(authors: str) -> str:
     names = [name.strip() for name in authors.split(",") if name.strip()]
     if not names:
@@ -872,7 +884,7 @@ def publication_detail_body(pub: dict[str, object]) -> str:
     """Build a Hugo/Blox-compatible detail page for metadata-only publication records."""
     title = str(pub.get("title") or "Publication")
     venue = str(pub.get("venue") or "").strip()
-    authors = str(pub.get("authors") or "").strip()
+    authors = publication_authors_display(pub).strip()
     display_date = publication_date_display(pub) or str(pub.get("year") or "")
     iso = publication_date_iso(pub)
     datetime_attr = f' datetime={iso}T00:00:00.000Z' if iso else ""
@@ -983,6 +995,8 @@ def archive_items() -> list[dict[str, object]]:
                 "href": f"/publication/{slug}/",
                 "title": title,
                 "authors": authors,
+                "corresponding_authors": [name.strip() for name in bib_field(text, "corresponding_authors").split(";") if name.strip()],
+                "equal_contributors": [name.strip() for name in bib_field(text, "equal_contributors").split(";") if name.strip()],
                 "venue": venue,
                 "year": year or "",
                 "doi": doi,
@@ -1083,7 +1097,7 @@ def publication_card(pub: dict[str, object], featured: bool = False) -> str:
         '<div class="jp-pub-content">'
         f'<div class="jp-pub-meta"><span>{html.escape(display_date)}</span>{selected_badge}{type_badge}</div>'
         f'<h3>{title_link}</h3>'
-        f'<p class="jp-pub-authors">{html.escape(str(pub.get("authors") or ""))}</p>'
+        f'<p class="jp-pub-authors">{html.escape(publication_authors_display(pub))}</p>'
         f'<p class="jp-pub-venue">{html.escape(venue_line)}</p>'
         f'{summary_html}'
         f'{publication_tags_html(tags)}'
@@ -1272,6 +1286,12 @@ def publication_detail_enrichment_block(pub: dict[str, object]) -> str:
     if date and pub.get("date_source"):
         date_note = f'<p class="jp-detail-date-note">Date source: {html.escape(str(pub["date_source"]))}.</p>'
     abstract_html = abstract_block(pub)
+    author_notes = []
+    if pub.get("corresponding_authors"):
+        author_notes.append("* Corresponding authors: " + ", ".join(pub["corresponding_authors"]) + ".")
+    if pub.get("equal_contributors"):
+        author_notes.append("# Equal contribution: " + ", ".join(pub["equal_contributors"]) + ".")
+    author_note_html = f'<p class="jp-note">{html.escape(" ".join(author_notes))}</p>' if author_notes else ""
     image_credit = ""
     if pub.get("thumbnail_status") == "real" and pub.get("image_credit"):
         image_credit = f'<p class="jp-note">{html.escape(str(pub["image_credit"]))}'
@@ -1282,7 +1302,7 @@ def publication_detail_enrichment_block(pub: dict[str, object]) -> str:
     return (
         '<section class="jp-publication-detail-card" aria-label="Publication resources">'
         f'{image}<div><h2>Publication Resources</h2>'
-        f'{date_note}{links}{image_credit}</div></section>'
+        f'{date_note}{author_note_html}{links}{image_credit}</div></section>'
         f'{abstract_html}'
     )
 
