@@ -1,0 +1,58 @@
+[
+  {
+    "slug": "chasam-school-2026",
+    "title": "CHASAM 2026: NEP and Machine-Learning Interatomic Potentials",
+    "date_label": "October 2026",
+    "date": "2026-10",
+    "body_html": "<p>Attended <a href=\"https://chasam.materialsmodeling.org/\" target=\"_blank\" rel=\"noopener\">CHASAM 2026</a>, the Chalmers School on Atomic-scale Modeling in Gothenburg (28 September - 2 October), with hands-on training in neuroevolution potentials (NEP) and machine-learning interatomic potentials (MLIPs).</p>"
+  },
+  {
+    "slug": "nano-letters-perovskite-heterojunctions-2026",
+    "title": "All-Perovskite Heterojunctions Published in Nano Letters",
+    "date_label": "September 2026",
+    "date": "2026-09",
+    "body_html": "<p>Our collaborative study on <a href=\"/publication/dai-2026-all-perovskite/\">all-perovskite low-dimensional/quantum-dot heterojunctions</a> is now published in <em>Nano Letters</em>. The work examines interface engineering to improve charge extraction and moisture stability in perovskite quantum-dot solar cells.</p>"
+  },
+  {
+    "slug": "bromide-perovskite-dftb-parameters-2026",
+    "title": "Lead-Bromide Perovskite DFTB Parameters Published in JCP",
+    "date_label": "July 2026",
+    "date": "2026-07",
+    "body_html": "<p>Our paper on <a href=\"/publication/jiang-2026-constructing/\">DFTB parameters for lead-bromide perovskites, perovskitoids, and related structures</a> is now published in <em>The Journal of Chemical Physics</em>. The study extends efficient electronic-structure modelling to bromide and mixed-halide systems.</p>"
+  },
+  {
+    "slug": "mcc-summer-conference-2026",
+    "title": "MCC Summer Conference 2026 at Daresbury Laboratory",
+    "date_label": "July 2026",
+    "date": "2026-07",
+    "body_html": "<p>Presented my research at the <a href=\"https://www.sc.stfc.ac.uk/events/mcc-conference-2026/\" target=\"_blank\" rel=\"noopener\">Materials Chemistry Consortium (MCC) Summer Conference</a> at STFC Daresbury Laboratory, held on 1-3 July 2026.</p>"
+  },
+  {
+    "slug": "university-of-york-2026",
+    "title": "Research Associate at the University of York",
+    "date_label": "March 2026",
+    "date": "2026-03",
+    "body_html": "<p>Joined the School of Physics, Engineering and Technology at the University of York as a Research Associate.</p>"
+  },
+  {
+    "slug": "acs-energy-letters-photostability-2026",
+    "title": "Quasi-2D Perovskite Photostability in ACS Energy Letters",
+    "date_label": "2026",
+    "date": "2026",
+    "body_html": "<p>Co-first-author paper on device-operando photostability of quasi-2D Ruddlesden-Popper perovskites published in <em>ACS Energy Letters</em>.</p>"
+  },
+  {
+    "slug": "iodide-perovskite-dftb-parameters-2025",
+    "title": "Iodide Perovskite DFTB Parameters in Physical Review Materials",
+    "date_label": "2025",
+    "date": "2025",
+    "body_html": "<p>Published DFTB parameters for electronic-structure prediction of iodide perovskites and heterostructures in <em>Physical Review Materials</em>.</p>"
+  },
+  {
+    "slug": "conference-presentations-2024-2025",
+    "title": "Conference Presentations: MATSUS, E-MRS, and French Meetings",
+    "date_label": "2024-2025",
+    "date": "",
+    "body_html": "<p>Presented work at MATSUS, E-MRS, and French national meetings on metal-halide perovskites and nanomaterials for energy.</p>"
+  }
+]

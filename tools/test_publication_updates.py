@@ -286,9 +286,10 @@ class PublicationUpdateTests(unittest.TestCase):
         self.assertIn('data-image-type="journal_cover"', block)
         self.assertNotIn("<span>EL</span>", block)
 
-    def test_home_news_links_to_the_bromide_paper(self):
-        home = site.home_body()
-        news = home.split('id="news"', 1)[1].split('</section>', 1)[0]
+    def test_news_detail_links_to_the_bromide_paper(self):
+        records = site.news_records()
+        item = next(record for record in records if record["slug"] == "bromide-perovskite-dftb-parameters-2026")
+        news = site.news_detail_body(item, records)
         self.assertEqual(news.count('href="/publication/jiang-2026-constructing/"'), 1)
         self.assertIn("July 2026", news)
         self.assertIn("The Journal of Chemical Physics", news)
@@ -299,14 +300,17 @@ class PublicationUpdateTests(unittest.TestCase):
         self.assertNotIn("https://doi.org/10.1021/acs.nanolett.6c03508", dois)
         home = site.home_body()
         selected = home.split('id="papers"', 1)[1].split('</section>', 1)[0]
-        news = home.split('id="news"', 1)[1].split('</section>', 1)[0]
+        records = site.news_records()
+        item = next(record for record in records if record["slug"] == "nano-letters-perovskite-heterojunctions-2026")
+        news = site.news_detail_body(item, records)
         self.assertIn("lead-bromide perovskites", selected)
         self.assertNotIn("Nano Letters", selected)
         self.assertIn('href="/publication/dai-2026-all-perovskite/"', news)
 
-    def test_home_news_includes_verified_conference_and_school_entries(self):
-        news = site.home_body().split('id="news"', 1)[1].split('</section>', 1)[0]
-        self.assertEqual(news.count("<li>"), 8)
+    def test_news_preserves_verified_conference_and_school_entries(self):
+        records = site.news_records()
+        news = "".join(record["body_html"] for record in records)
+        self.assertEqual(len(records), 8)
         self.assertIn('href="https://chasam.materialsmodeling.org/"', news)
         self.assertIn("28 September - 2 October", news)
         self.assertIn("neuroevolution potentials (NEP)", news)

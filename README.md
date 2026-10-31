@@ -4,8 +4,9 @@ A personal academic website for Junke Jiang. The site is based on the [theme-aca
 
 This repository currently contains the generated static site rather than the Hugo source tree. The main manually edited pages are:
 
-- `index.html` — homepage, research vision, selected publications, news, and contact.
+- `index.html` — homepage, research vision, selected publications, and contact.
 - `research/index.html` — research themes and future group/lab directions.
+- `news/index.html` and `news/*/index.html` — news archive and individual news pages.
 - `publication/index.html` — selected publications plus the existing generated publication archive.
 - `experience/index.html` — academic CV content adapted from the latest Chinese CV.
 - `teaching/index.html` — teaching and future supervision interests.
@@ -13,6 +14,14 @@ This repository currently contains the generated static site rather than the Hug
 - `tools/update_academic_site.py` — helper script used to apply the current static-page updates.
 
 If the Hugo source files are restored later, prefer editing the source content and regenerating the site instead of editing the generated HTML directly.
+
+## News Updates
+
+`tools/news.json` stores the reviewed news items in display order. Each item has a stable `slug`, a `title`, the original `date_label`, an optional ISO `date` at the known precision, and `body_html`. Preserve the existing text until the author supplies expanded copy and media. Leave `date` empty for a date range; a month or year is never converted to a fabricated day.
+
+`python3 tools/update_academic_site.py` builds `/news/` and every `/news/<slug>/` detail page using the existing site header and footer, adds News between Research and Publications throughout the site, and registers the pages in the sitemap. The full news list is no longer part of the homepage. Each list item opens its local detail page, which has an archive link and older/newer navigation. New pages do not inherit the template's old CV/article dates or structured metadata.
+
+No placeholder photos, videos, or expanded event accounts are generated. Author-supplied figures, photographs, captions, and video embeds can be added later inside the article content. The scoped news styles constrain future images and videos without changing publication-card styles. Run `python3 -m unittest discover -s tools -p 'test_*.py'` for news and publication regression checks.
 
 ## Publication Updates
 

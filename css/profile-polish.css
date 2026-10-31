@@ -1330,3 +1330,259 @@
     grid-template-columns: 1fr;
   }
 }
+
+.jp-news-page {
+  min-width: 0;
+}
+
+.jp-news-header {
+  padding: 3.75rem 1.25rem 2.25rem;
+}
+
+.jp-news-title,
+.jp-news-article-title {
+  margin: 0 0 1rem;
+  color: #0f172a;
+  font-size: 2.5rem;
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: 0;
+  overflow-wrap: anywhere;
+}
+
+.jp-news-archive {
+  padding: 0 1.25rem 3.75rem;
+}
+
+.jp-news-list {
+  border-top: 1px solid #dbe4ee;
+}
+
+.jp-news-row-link {
+  display: grid;
+  grid-template-columns: 9rem minmax(0, 1fr);
+  gap: 1.75rem;
+  padding: 1.75rem 0;
+  border-bottom: 1px solid #dbe4ee;
+  color: inherit;
+  text-decoration: none;
+}
+
+.jp-news-date {
+  margin: 0;
+  padding-top: 0.2rem;
+  color: #64748b;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.6;
+}
+
+.jp-news-row-content {
+  min-width: 0;
+}
+
+.jp-news-row h2 {
+  margin: 0 0 0.65rem;
+  color: #0f172a;
+  font-size: 1.3rem;
+  font-weight: 700;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.jp-news-row p {
+  margin: 0;
+  color: #475569;
+  font-size: 1rem;
+  line-height: 1.75;
+}
+
+.jp-news-read {
+  display: inline-flex;
+  gap: 0.4rem;
+  margin-top: 0.85rem;
+  color: #0f766e;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.jp-news-row-link:hover h2 {
+  color: #0f766e;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.jp-news-row-link:focus-visible,
+.jp-news-back:focus-visible,
+.jp-news-pagination a:focus-visible {
+  outline: 2px solid #0f766e;
+  outline-offset: 5px;
+}
+
+.jp-news-detail {
+  padding: 3rem 1.25rem 4rem;
+}
+
+.jp-news-back {
+  display: inline-block;
+  margin-bottom: 2.5rem;
+  color: #0f766e;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.jp-news-article-header .jp-news-date {
+  margin-bottom: 0.75rem;
+}
+
+.jp-news-article-title {
+  font-size: 2.25rem;
+  line-height: 1.3;
+}
+
+.jp-news-content {
+  margin-top: 2rem;
+  color: #334155;
+  font-size: 1.05rem;
+  line-height: 1.85;
+  overflow-wrap: anywhere;
+}
+
+.jp-news-content p {
+  margin: 0 0 1.25rem;
+}
+
+.jp-news-content a {
+  color: #0f766e;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+.jp-news-content img,
+.jp-news-content video {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  object-fit: contain;
+}
+
+.jp-news-content iframe {
+  width: 100%;
+  max-width: 100%;
+  aspect-ratio: 16 / 9;
+  border: 0;
+}
+
+.jp-news-pagination {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.5rem;
+  margin-top: 3rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #dbe4ee;
+}
+
+.jp-news-pagination a {
+  min-width: 0;
+  color: #0f766e;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.jp-news-pagination span,
+.jp-news-pagination strong {
+  display: block;
+}
+
+.jp-news-pagination span {
+  margin-bottom: 0.5rem;
+  color: #64748b;
+  font-size: 0.875rem;
+}
+
+.jp-news-pagination strong {
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.6;
+}
+
+.jp-news-pagination a:hover strong {
+  text-decoration: underline;
+}
+
+.jp-news-newer {
+  grid-column: 2;
+  text-align: right;
+}
+
+.dark .jp-news-title,
+.dark .jp-news-article-title,
+.dark .jp-news-row h2 {
+  color: #e6edf5;
+}
+
+.dark .jp-news-date,
+.dark .jp-news-pagination span {
+  color: #94a3b8;
+}
+
+.dark .jp-news-row p,
+.dark .jp-news-content {
+  color: #cbd5e1;
+}
+
+.dark .jp-news-list,
+.dark .jp-news-row-link,
+.dark .jp-news-pagination {
+  border-color: #334155;
+}
+
+.dark .jp-news-read,
+.dark .jp-news-back,
+.dark .jp-news-content a,
+.dark .jp-news-pagination a,
+.dark .jp-news-row-link:hover h2 {
+  color: #5eead4;
+}
+
+@media (max-width: 640px) {
+  .jp-news-header {
+    padding: 2.5rem 1rem 1.75rem;
+  }
+
+  .jp-news-title,
+  .jp-news-article-title {
+    font-size: 2rem;
+  }
+
+  .jp-news-archive {
+    padding: 0 1rem 2.5rem;
+  }
+
+  .jp-news-row-link {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.5rem;
+    padding: 1.5rem 0;
+  }
+
+  .jp-news-row h2 {
+    font-size: 1.2rem;
+  }
+
+  .jp-news-detail {
+    padding: 2rem 1rem 3rem;
+  }
+
+  .jp-news-back {
+    margin-bottom: 1.75rem;
+  }
+
+  .jp-news-pagination {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .jp-news-newer {
+    grid-column: auto;
+    text-align: left;
+  }
+}

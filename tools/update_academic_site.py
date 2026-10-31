@@ -4,8 +4,10 @@ import csv
 import html
 import json
 import re
+import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 from email.utils import format_datetime
+from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import quote, quote_plus, urlsplit
 
@@ -22,6 +24,8 @@ PUBLICATION_REVIEW_CSV = ROOT / "tools" / "publication_date_review.csv"
 PUBLICATION_ASSETS_REVIEW_CSV = ROOT / "tools" / "publication_assets_review.csv"
 PUBLICATION_FALLBACK_THUMB = "/media/publications/fallback/publication-thumbnail.svg"
 SITE_ICON = "/media/icon_hu_645fa481986063ef.png"
+PROFILE_STYLESHEET = "/css/profile-polish.css?v=news-1"
+NEWS_DATA_JSON = ROOT / "tools" / "news.json"
 DFTB_GITHUB_RELEASES = "https://github.com/dftbparams/perov/releases"
 DFTB_ZENODO_RECORD = "https://zenodo.org/records/14778741"
 DFTB_BROMIDE_REPOSITORY = "https://github.com/JunkeJiang/perov"
@@ -45,6 +49,7 @@ REMOVED_PUBLICATION_SLUGS = {
 NAV_ITEMS = [
     ("Home", "/"),
     ("Research", "/research/"),
+    ("News", "/news/"),
     ("Publications", "/publication/"),
     ("CV", "/experience/"),
     ("Teaching", "/teaching/"),
@@ -67,6 +72,8 @@ def active_for(path: str, href: str) -> bool:
         return path == "index.html"
     if href == "/research/":
         return path.startswith("research/") or path.startswith("projects/")
+    if href == "/news/":
+        return path.startswith("news/")
     if href == "/publication/":
         return path.startswith("publication/") or path.startswith("publication_types/")
     if href == "/experience/":
@@ -93,6 +100,10 @@ def update_nav_and_shared_head(s: str, path: str) -> str:
     s = re.sub(r"<ul id=nav-menu\b.*?</ul>", nav_html(path), s, count=1, flags=re.S)
     if "/css/profile-polish.css" not in s:
         s = s.replace("</head>", "<link rel=stylesheet href=/css/profile-polish.css></head>", 1)
+    s = re.sub(
+        r'''href=(?:"/css/profile-polish\.css(?:\?[^"\s>]*)?"|'/css/profile-polish\.css(?:\?[^'\s>]*)?'|/css/profile-polish\.css(?:\?[^\s>]*)?)''',
+        f'href="{PROFILE_STYLESHEET}"', s,
+    )
     s = s.replace('@GetResearchDev', '@junke_jiang')
     s = s.replace("© 2025 Junke Jiang", "© 2026 Junke Jiang")
     s = s.replace(OLD_TITLE, CURRENT_TITLE)
@@ -1467,6 +1478,160 @@ def research_direction_cards() -> str:
     return "".join(cards)
 
 
+def news_records() -> list[dict[str, str]]:
+    """Preserve the reviewed order and the date precision supplied by the author."""
+    records = json.loads(NEWS_DATA_JSON.read_text(encoding="utf-8"))
+    if not isinstance(records, list):
+        raise ValueError("News metadata must be a list")
+    slugs = set()
+    for record in records:
+        if not isinstance(record, dict) or any(
+            not isinstance(record.get(field), str) or not record[field].strip()
+            for field in ("slug", "title", "date_label", "body_html")
+        ):
+            raise ValueError("Every news item needs a slug, title, date label, and body")
+        slug = record["slug"]
+        if not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", slug) or slug in slugs:
+            raise ValueError(f"Invalid or duplicate news slug: {slug}")
+        slugs.add(slug)
+        value = record.get("date", "")
+        if not isinstance(value, str):
+            raise ValueError(f"Invalid news date: {slug}")
+        if value:
+            if not re.fullmatch(r"\d{4}(?:-\d{2}(?:-\d{2})?)?", value):
+                raise ValueError(f"Invalid news date: {slug}")
+            date_format = {4: "%Y", 7: "%Y-%m", 10: "%Y-%m-%d"}[len(value)]
+            datetime.strptime(value, date_format)
+    return records
+
+
+def news_plain_text(body_html: str) -> str:
+    class TextParser(HTMLParser):
+        def __init__(self):
+            super().__init__()
+            self.parts = []
+
+        def handle_data(self, data):
+            self.parts.append(data)
+
+        def handle_endtag(self, tag):
+            if tag in {"p", "li", "figure", "h2", "h3"}:
+                self.parts.append(" ")
+
+    parser = TextParser()
+    parser.feed(body_html)
+    return " ".join("".join(parser.parts).split())
+
+
+def news_date_html(record: dict[str, str]) -> str:
+    label = html.escape(record["date_label"])
+    value = record.get("date")
+    return f'<time datetime="{html.escape(value)}">{label}</time>' if value else f"<span>{label}</span>"
+
+
+def news_body() -> str:
+    items = []
+    for record in news_records():
+        slug = record["slug"]
+        title = html.escape(record["title"])
+        summary = html.escape(news_plain_text(record["body_html"]))
+        items.append(
+            '<article class="jp-news-row">'
+            f'<a class="jp-news-row-link" href="/news/{slug}/" aria-labelledby="news-title-{slug}">'
+            f'<div class="jp-news-date">{news_date_html(record)}</div>'
+            f'<div class="jp-news-row-content"><h2 id="news-title-{slug}">{title}</h2>'
+            f'<p>{summary}</p><span class="jp-news-read">Read news <span aria-hidden="true">&rarr;</span></span>'
+            '</div></a></article>'
+        )
+    return (
+        '<div class="page-body jp-page jp-news-page"><main>'
+        '<header class="jp-news-header"><div class="jp-container">'
+        '<h1 class="jp-news-title">News</h1>'
+        '<p class="jp-lead">Publications, conferences, and academic activities.</p>'
+        '</div></header><section class="jp-section jp-news-archive" aria-label="News archive">'
+        '<div class="jp-container jp-news-list">' + "".join(items) + '</div></section>'
+        '</main></div>'
+    )
+
+
+def news_detail_body(record: dict[str, str], records: list[dict[str, str]]) -> str:
+    index = next(i for i, item in enumerate(records) if item["slug"] == record["slug"])
+    navigation = []
+    for position, label, klass in ((index + 1, "Older news", "older"), (index - 1, "Newer news", "newer")):
+        if 0 <= position < len(records):
+            other = records[position]
+            navigation.append(
+                f'<a class="jp-news-{klass}" href="/news/{other["slug"]}/">'
+                f'<span>{label}</span><strong>{html.escape(other["title"])}</strong></a>'
+            )
+    pagination = '<nav class="jp-news-pagination" aria-label="More news">' + "".join(navigation) + '</nav>' if navigation else ""
+    return (
+        '<div class="page-body jp-page jp-news-page"><main class="jp-news-detail">'
+        '<article class="jp-narrow"><header class="jp-news-article-header">'
+        '<a class="jp-news-back" href="/news/">&larr; News</a>'
+        f'<p class="jp-news-date">{news_date_html(record)}</p>'
+        f'<h1 class="jp-news-article-title">{html.escape(record["title"])}</h1></header>'
+        f'<div class="jp-news-content">{record["body_html"]}</div>{pagination}'
+        '</article></main></div>'
+    )
+
+
+def news_page_metadata(s: str, record: dict[str, str] | None = None) -> str:
+    """Replace inherited CV/article metadata without inventing news publication days."""
+    url = f'{SITE_URL}/news/' + (f'{record["slug"]}/' if record else "")
+    data = {
+        "@context": "https://schema.org",
+        "@type": "BlogPosting" if record else "CollectionPage",
+        "url": url,
+        "name": record["title"] if record else "News",
+    }
+    if record:
+        data.update(
+            headline=record["title"],
+            description=news_plain_text(record["body_html"]),
+            author={"@type": "Person", "name": "Junke Jiang"},
+            isPartOf={"@type": "CollectionPage", "url": f"{SITE_URL}/news/"},
+        )
+        if len(record.get("date", "")) == 10:
+            data["datePublished"] = record["date"]
+    s = re.sub(r'<meta property="(?:article:(?:published|modified)_time|og:updated_time)"[^>]*>', "", s)
+    s = re.sub(r'<meta property="og:type"[^>]*>', "", s)
+    s = re.sub(r'<script type=(?:"application/ld\+json"|application/ld\+json)>.*?</script>', "", s, flags=re.S)
+    structured = json.dumps(data, ensure_ascii=False, separators=(",", ":")).replace("<", "\\u003c")
+    og_type = "article" if record else "website"
+    return s.replace('</head>', f'<meta property="og:type" content="{og_type}"><script type="application/ld+json">{structured}</script></head>', 1)
+
+
+def generate_news_pages() -> None:
+    records = news_records()
+    make_page_from_template(
+        "experience/index.html", "news/index.html", "News | Junke Jiang",
+        "Publications, conferences, and academic activities from Junke Jiang.", "/news/", news_body(),
+    )
+    write("news/index.html", news_page_metadata(read("news/index.html")))
+    for record in records:
+        output = f'news/{record["slug"]}/index.html'
+        make_page_from_template(
+            "experience/index.html", output, f'{record["title"]} | Junke Jiang',
+            news_plain_text(record["body_html"]), f'/news/{record["slug"]}/', news_detail_body(record, records),
+        )
+        write(output, news_page_metadata(read(output), record))
+
+
+def sync_news_sitemap_entries() -> None:
+    path = ROOT / "sitemap.xml"
+    if not path.exists():
+        return
+    s = path.read_text(encoding="utf-8")
+    root = ET.fromstring(s)
+    namespace = root.tag.split("}")[0] + "}" if root.tag.startswith("{") else ""
+    existing = {item.text for item in root.findall(f"{namespace}url/{namespace}loc")}
+    urls = [f"{SITE_URL}/news/"] + [f'{SITE_URL}/news/{record["slug"]}/' for record in news_records()]
+    entries = "".join(f"<url><loc>{html.escape(url)}</loc></url>" for url in urls if url not in existing)
+    if entries:
+        path.write_text(s.replace("</urlset>", entries + "</urlset>", 1), encoding="utf-8")
+
+
 def home_body() -> str:
     return f'''<div class="page-body jp-page">
 <section class="jp-hero">
@@ -1531,21 +1696,6 @@ def home_body() -> str:
       <a class="jp-button jp-button--ghost" href="https://scholar.google.com/citations?user=PoVXBKUAAAAJ&amp;hl=en" target="_blank" rel="noopener">Google Scholar</a>
     </div>
     <p class="jp-note"># Equal contribution. Citation counts and indices are intentionally not repeated here so they remain current through Google Scholar.</p>
-  </div>
-</section>
-<section class="jp-section jp-section--soft" id="news">
-  <div class="jp-container">
-    <h2 class="jp-heading">News</h2>
-    <ul class="jp-list">
-      <li><h3>October 2026</h3><p>Attended <a href="https://chasam.materialsmodeling.org/" target="_blank" rel="noopener">CHASAM 2026</a>, the Chalmers School on Atomic-scale Modeling in Gothenburg (28 September - 2 October), with hands-on training in neuroevolution potentials (NEP) and machine-learning interatomic potentials (MLIPs).</p></li>
-      <li><h3>September 2026</h3><p>Our collaborative study on <a href="/publication/dai-2026-all-perovskite/">all-perovskite low-dimensional/quantum-dot heterojunctions</a> is now published in <em>Nano Letters</em>. The work examines interface engineering to improve charge extraction and moisture stability in perovskite quantum-dot solar cells.</p></li>
-      <li><h3>July 2026</h3><p>Our paper on <a href="/publication/jiang-2026-constructing/">DFTB parameters for lead-bromide perovskites, perovskitoids, and related structures</a> is now published in <em>The Journal of Chemical Physics</em>. The study extends efficient electronic-structure modelling to bromide and mixed-halide systems.</p></li>
-      <li><h3>July 2026</h3><p>Presented my research at the <a href="https://www.sc.stfc.ac.uk/events/mcc-conference-2026/" target="_blank" rel="noopener">Materials Chemistry Consortium (MCC) Summer Conference</a> at STFC Daresbury Laboratory, held on 1-3 July 2026.</p></li>
-      <li><h3>March 2026</h3><p>Joined the School of Physics, Engineering and Technology at the University of York as a Research Associate.</p></li>
-      <li><h3>2026</h3><p>Co-first-author paper on device-operando photostability of quasi-2D Ruddlesden-Popper perovskites published in <em>ACS Energy Letters</em>.</p></li>
-      <li><h3>2025</h3><p>Published DFTB parameters for electronic-structure prediction of iodide perovskites and heterostructures in <em>Physical Review Materials</em>.</p></li>
-      <li><h3>2024-2025</h3><p>Presented work at MATSUS, E-MRS, and French national meetings on metal-halide perovskites and nanomaterials for energy.</p></li>
-    </ul>
   </div>
 </section>
 <section class="jp-section" id="contact">
@@ -2180,6 +2330,7 @@ def main() -> None:
         "/teaching/",
         teaching_body(),
     )
+    generate_news_pages()
     ensure_publication_detail_pages()
     normalize_curated_local_publication_detail_pages()
     update_page(
@@ -2194,6 +2345,7 @@ def main() -> None:
     cleanup_generated_outputs()
     update_sitemap()
     sync_publication_xml_outputs()
+    sync_news_sitemap_entries()
 
 
 if __name__ == "__main__":
