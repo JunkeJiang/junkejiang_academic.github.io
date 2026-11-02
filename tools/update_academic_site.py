@@ -1506,16 +1506,25 @@ def news_records() -> list[dict[str, str]]:
 
 
 def news_plain_text(body_html: str) -> str:
+    """Keep figure captions out of archive excerpts and page descriptions."""
     class TextParser(HTMLParser):
         def __init__(self):
             super().__init__()
             self.parts = []
+            self.figure_depth = 0
+
+        def handle_starttag(self, tag, attrs):
+            if tag == "figure":
+                self.figure_depth += 1
 
         def handle_data(self, data):
-            self.parts.append(data)
+            if not self.figure_depth:
+                self.parts.append(data)
 
         def handle_endtag(self, tag):
-            if tag in {"p", "li", "figure", "h2", "h3"}:
+            if tag == "figure" and self.figure_depth:
+                self.figure_depth -= 1
+            if not self.figure_depth and tag in {"p", "li", "figure", "h2", "h3"}:
                 self.parts.append(" ")
 
     parser = TextParser()

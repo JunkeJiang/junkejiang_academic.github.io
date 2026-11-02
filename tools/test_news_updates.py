@@ -81,6 +81,15 @@ class NewsUpdateTests(unittest.TestCase):
     def test_plain_text_preview_preserves_link_and_emphasis_spacing(self):
         self.assertEqual(site.news_plain_text('<p>Published in <em>Nano Letters</em>.</p><p>Read <a href="/">more</a>.</p>'), "Published in Nano Letters. Read more.")
 
+    def test_figures_and_captions_do_not_change_archive_excerpts(self):
+        body = '<p>Original news.</p><figure><a href="/photo.jpg"><img src="/photo.jpg" alt="Photo"></a><figcaption>Photo caption.</figcaption></figure><p>Another paragraph.</p>'
+        self.assertEqual(site.news_plain_text(body), "Original news. Another paragraph.")
+        caption = "CHASAM 2026 group photograph."
+        records = site.news_records()
+        item = next(record for record in records if record["slug"] == "chasam-school-2026")
+        self.assertIn(caption, site.news_detail_body(item, records))
+        self.assertNotIn(caption, site.news_body())
+
     def test_invalid_or_duplicate_records_fail_before_writing_pages(self):
         item = {"slug": "valid-news", "title": "Title", "date_label": "2026", "date": "2026", "body_html": "<p>News.</p>"}
         cases = [[item, item], [{**item, "slug": "../outside"}], [{**item, "date": "2026-13"}], [{**item, "body_html": ""}]]
@@ -141,10 +150,37 @@ class NewsUpdateTests(unittest.TestCase):
             self.assertEqual(len(urls), 10)
             self.assertEqual(len(set(urls)), len(urls))
 
-    def test_initial_news_pages_do_not_add_unsupplied_media(self):
+    def test_news_photos_only_appear_in_the_assigned_stories(self):
+        class ImageParser(HTMLParser):
+            def __init__(self):
+                super().__init__()
+                self.images = []
+
+            def handle_starttag(self, tag, attrs):
+                if tag == "img":
+                    self.images.append(dict(attrs))
+
+        expected = {
+            "chasam-school-2026": ("/media/news/chasam-school-2026/group-photo.jpg", "1600", "1200"),
+            "university-of-york-2026": ("/media/news/university-of-york-2026/lakeside-view.jpg", "1919", "1080"),
+        }
         records = site.news_records()
-        for body in [site.news_body()] + [site.news_detail_body(record, records) for record in records]:
-            for tag in ("<img", "<video", "<iframe"):
+        self.assertNotIn("<img", site.news_body())
+        for record in records:
+            body = site.news_detail_body(record, records)
+            parser = ImageParser()
+            parser.feed(body)
+            with self.subTest(slug=record["slug"]):
+                if record["slug"] in expected:
+                    self.assertEqual(len(parser.images), 1)
+                    image = parser.images[0]
+                    self.assertEqual((image["src"], image["width"], image["height"]), expected[record["slug"]])
+                    self.assertTrue(image["alt"])
+                    self.assertEqual(image["loading"], "lazy")
+                    self.assertTrue((site.ROOT / image["src"].lstrip("/")).is_file())
+                else:
+                    self.assertEqual(parser.images, [])
+            for tag in ("<video", "<iframe"):
                 self.assertNotIn(tag, body)
 
 
