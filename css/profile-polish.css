@@ -1184,11 +1184,12 @@
   }
 
   .jp-publications-layout {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .jp-pub-sidebar {
     position: static;
+    min-width: 0;
   }
 
   .jp-pub-sidebar nav {

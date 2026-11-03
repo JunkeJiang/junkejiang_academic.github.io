@@ -25,6 +25,7 @@ PUBLICATION_ASSETS_REVIEW_CSV = ROOT / "tools" / "publication_assets_review.csv"
 PUBLICATION_FALLBACK_THUMB = "/media/publications/fallback/publication-thumbnail.svg"
 SITE_ICON = "/media/icon_hu_645fa481986063ef.png"
 PROFILE_STYLESHEET = "/css/profile-polish.css?v=news-1"
+PUBLICATION_ARCHIVE_STYLESHEET = "/css/profile-polish.css?v=publication-mobile-2"
 NEWS_DATA_JSON = ROOT / "tools" / "news.json"
 DFTB_GITHUB_RELEASES = "https://github.com/dftbparams/perov/releases"
 DFTB_ZENODO_RECORD = "https://zenodo.org/records/14778741"
@@ -97,12 +98,13 @@ def nav_html(path: str) -> str:
 
 
 def update_nav_and_shared_head(s: str, path: str) -> str:
+    stylesheet = PUBLICATION_ARCHIVE_STYLESHEET if path == "publication/index.html" else PROFILE_STYLESHEET
     s = re.sub(r"<ul id=nav-menu\b.*?</ul>", nav_html(path), s, count=1, flags=re.S)
     if "/css/profile-polish.css" not in s:
         s = s.replace("</head>", "<link rel=stylesheet href=/css/profile-polish.css></head>", 1)
     s = re.sub(
         r'''href=(?:"/css/profile-polish\.css(?:\?[^"\s>]*)?"|'/css/profile-polish\.css(?:\?[^'\s>]*)?'|/css/profile-polish\.css(?:\?[^\s>]*)?)''',
-        f'href="{PROFILE_STYLESHEET}"', s,
+        f'href="{stylesheet}"', s,
     )
     s = s.replace('@GetResearchDev', '@junke_jiang')
     s = s.replace("© 2025 Junke Jiang", "© 2026 Junke Jiang")
