@@ -30,7 +30,7 @@ class NewsUpdateTests(unittest.TestCase):
     def test_each_archive_row_is_one_clickable_local_story(self):
         records = site.news_records()
         body = site.news_body()
-        self.assertEqual(len({record["slug"] for record in records}), 8)
+        self.assertEqual(len({record["slug"] for record in records}), len(records))
         self.assertEqual(body.count('<article class="jp-news-row">'), len(records))
         for record in records:
             self.assertEqual(body.count(f'href="/news/{record["slug"]}/"'), 1)
@@ -74,7 +74,9 @@ class NewsUpdateTests(unittest.TestCase):
         records = site.news_records()
         self.assertEqual(site.news_date_html(records[0]), '<time datetime="2026-10">October 2026</time>')
         self.assertEqual(site.news_date_html(records[5]), '<time datetime="2026">2026</time>')
-        self.assertEqual(site.news_date_html(records[-1]), '<span>2024-2025</span>')
+        dates = {record["slug"]: site.news_date_html(record) for record in records}
+        self.assertEqual(dates["conference-presentations-2024-2025"], '<span>2024-2025</span>')
+        self.assertEqual(dates["xian-visit-2024"], '<time datetime="2024-11">November 2024</time>')
         for record in records:
             self.assertNotIn("-01-01", site.news_date_html(record))
 
@@ -122,7 +124,7 @@ class NewsUpdateTests(unittest.TestCase):
             with patch.object(site, "ROOT", root):
                 site.generate_news_pages()
                 first = {path: path.read_bytes() for path in (root / "news").rglob("index.html")}
-                self.assertEqual(len(first), 9)
+            self.assertEqual(len(first), 1 + len(site.news_records()))
                 for path in first:
                     text = path.read_text()
                     self.assertIn("Shared footer", text)
@@ -147,7 +149,11 @@ class NewsUpdateTests(unittest.TestCase):
             self.assertIn(original, sitemap.read_text())
             document = ET.fromstring(sitemap.read_text())
             urls = [item.text for item in document.findall("{*}url/{*}loc")]
-            self.assertEqual(len(urls), 10)
+            self.assertEqual(set(urls), {
+                "https://junkejiang.com/",
+                "https://junkejiang.com/news/",
+                *(f'https://junkejiang.com/news/{record["slug"]}/' for record in site.news_records()),
+            })
             self.assertEqual(len(set(urls)), len(urls))
 
     def test_news_photos_only_appear_in_the_assigned_stories(self):
@@ -161,8 +167,12 @@ class NewsUpdateTests(unittest.TestCase):
                     self.images.append(dict(attrs))
 
         expected = {
-            "chasam-school-2026": ("/media/news/chasam-school-2026/group-photo.jpg", "1600", "1200"),
-            "university-of-york-2026": ("/media/news/university-of-york-2026/lakeside-view.jpg", "1919", "1080"),
+            "chasam-school-2026": [("/media/news/chasam-school-2026/group-photo.jpg", "1600", "1200")],
+            "university-of-york-2026": [("/media/news/university-of-york-2026/lakeside-view.jpg", "1919", "1080")],
+            "xian-visit-2024": [
+                ("/media/news/xian-visit-2024/xian-at-night.png", "685", "735"),
+                ("/media/news/xian-visit-2024/shaanxi-dinner.jpg", "1706", "1280"),
+            ],
         }
         records = site.news_records()
         self.assertNotIn("<img", site.news_body())
@@ -171,15 +181,14 @@ class NewsUpdateTests(unittest.TestCase):
             parser = ImageParser()
             parser.feed(body)
             with self.subTest(slug=record["slug"]):
-                if record["slug"] in expected:
-                    self.assertEqual(len(parser.images), 1)
-                    image = parser.images[0]
-                    self.assertEqual((image["src"], image["width"], image["height"]), expected[record["slug"]])
+                self.assertEqual(
+                    [(image["src"], image["width"], image["height"]) for image in parser.images],
+                    expected.get(record["slug"], []),
+                )
+                for image in parser.images:
                     self.assertTrue(image["alt"])
                     self.assertEqual(image["loading"], "lazy")
                     self.assertTrue((site.ROOT / image["src"].lstrip("/")).is_file())
-                else:
-                    self.assertEqual(parser.images, [])
             for tag in ("<video", "<iframe"):
                 self.assertNotIn(tag, body)
 

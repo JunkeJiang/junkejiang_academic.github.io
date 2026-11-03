@@ -310,7 +310,6 @@ class PublicationUpdateTests(unittest.TestCase):
     def test_news_preserves_verified_conference_and_school_entries(self):
         records = site.news_records()
         news = "".join(record["body_html"] for record in records)
-        self.assertEqual(len(records), 8)
         self.assertIn('href="https://chasam.materialsmodeling.org/"', news)
         self.assertIn("28 September - 2 October", news)
         self.assertIn("neuroevolution potentials (NEP)", news)
