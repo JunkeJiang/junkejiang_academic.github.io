@@ -173,6 +173,10 @@ class NewsUpdateTests(unittest.TestCase):
                 ("/media/news/xian-visit-2024/xian-at-night.png", "685", "735"),
                 ("/media/news/xian-visit-2024/shaanxi-dinner.jpg", "1706", "1280"),
             ],
+            "emrs-fall-meeting-warsaw-2023": [
+                ("/media/news/emrs-fall-meeting-warsaw-2023/with-prof-tao.jpg", "2281", "1280"),
+                ("/media/news/emrs-fall-meeting-warsaw-2023/palace-of-culture-and-science.jpg", "720", "1280"),
+            ],
         }
         records = site.news_records()
         self.assertNotIn("<img", site.news_body())
