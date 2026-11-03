@@ -25,7 +25,7 @@ PUBLICATION_ASSETS_REVIEW_CSV = ROOT / "tools" / "publication_assets_review.csv"
 PUBLICATION_FALLBACK_THUMB = "/media/publications/fallback/publication-thumbnail.svg"
 SITE_ICON = "/media/icon_hu_645fa481986063ef.png"
 PROFILE_STYLESHEET = "/css/profile-polish.css?v=news-1"
-PUBLICATION_ARCHIVE_STYLESHEET = "/css/profile-polish.css?v=publication-mobile-2"
+PUBLICATION_ARCHIVE_STYLESHEET = "/css/profile-polish.css?v=publication-mobile-3"
 NEWS_DATA_JSON = ROOT / "tools" / "news.json"
 DFTB_GITHUB_RELEASES = "https://github.com/dftbparams/perov/releases"
 DFTB_ZENODO_RECORD = "https://zenodo.org/records/14778741"
@@ -1160,9 +1160,7 @@ def publications_sidebar(records: list[dict[str, object]], has_theses: bool = Fa
         f'<a href="#topic-{anchor_id(topic)}">{html.escape(topic)}</a>' for topic in topics
     )
     thesis_link = '<a href="#thesis">Thesis</a>' if has_theses else ""
-    return (
-        '<aside class="jp-pub-sidebar" aria-label="Publication navigation">'
-        '<nav>'
+    section_links = (
         '<a href="#overview">Overview</a>'
         '<a href="#selected-publications">Selected Publications</a>'
         f'{thesis_link}'
@@ -1170,9 +1168,20 @@ def publications_sidebar(records: list[dict[str, object]], has_theses: bool = Fa
         '<a href="#data-parameters">Data / Parameters</a>'
         '<a href="#related-publications">You May Also Be Interested In</a>'
         '<a href="#by-tag">By Tag</a>'
-        '<div class="jp-pub-nav-group"><span>By Year</span>' + year_links + "</div>"
-        '<div class="jp-pub-nav-group"><span>By Topic</span>' + topic_links + "</div>"
-        '</nav></aside>'
+    )
+    groups = (("By Year", year_links), ("By Topic", topic_links))
+    desktop_groups = "".join(
+        f'<div class="jp-pub-nav-group"><span>{label}</span>{links}</div>'
+        for label, links in groups
+    )
+    mobile_groups = "".join(
+        f'<details><summary>{label}</summary><div>{links}</div></details>'
+        for label, links in (("Page Sections", section_links), *groups)
+    )
+    return (
+        '<aside class="jp-pub-sidebar" aria-label="Publication navigation">'
+        f'<nav class="jp-pub-nav-desktop">{section_links}{desktop_groups}</nav>'
+        f'<nav class="jp-pub-nav-mobile">{mobile_groups}</nav></aside>'
     )
 
 
