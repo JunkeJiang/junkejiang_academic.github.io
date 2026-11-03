@@ -1451,7 +1451,7 @@ RESEARCH_DIRECTIONS = [
         "tags": ["Defect dynamics", "ML potentials", "Hybrid semiconductors"],
     },
     {
-        "image": "/media/research/energy-materials.png",
+        "image": "/media/research/energy-materials.png?v=phase-legend-2",
         "alt": "Perovskite stability",
         "title": "Perovskite Stability, Phase Transitions, and Formation",
         "description": "I study the mechanisms that control phase stability, crystallization, solvent effects, and morphology in metal-halide perovskites using DFT and ab initio molecular dynamics.",
