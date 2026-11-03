@@ -1444,8 +1444,8 @@ def social_links_html() -> str:
 
 RESEARCH_DIRECTIONS = [
     {
-        "image": "/media/research/materials-design.png",
-        "alt": "Hybrid semiconductor models",
+        "image": "/media/research/materials-design.png?v=grain-boundary-2",
+        "alt": "Schematic of a halide vacancy at a perovskite grain boundary and the workflow from DFT to large-scale dynamics.",
         "title": "Grain-Boundary Defects and Machine-Learning Force Fields",
         "description": "At York, I work on defect dynamics at grain boundaries in hybrid semiconductors and on developing machine-learning force fields for realistic, large-scale simulations.",
         "tags": ["Defect dynamics", "ML potentials", "Hybrid semiconductors"],
