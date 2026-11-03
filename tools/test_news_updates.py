@@ -124,7 +124,7 @@ class NewsUpdateTests(unittest.TestCase):
             with patch.object(site, "ROOT", root):
                 site.generate_news_pages()
                 first = {path: path.read_bytes() for path in (root / "news").rglob("index.html")}
-            self.assertEqual(len(first), 1 + len(site.news_records()))
+                self.assertEqual(len(first), 1 + len(site.news_records()))
                 for path in first:
                     text = path.read_text()
                     self.assertIn("Shared footer", text)
