@@ -18,7 +18,8 @@ class ContactUpdateTests(unittest.TestCase):
         self.assertEqual(body.count(f'href="mailto:{site.CURRENT_EMAIL}"'), 1)
         self.assertIn(f'Work email: <a href="mailto:{site.CURRENT_EMAIL}">', contact)
         for topic in ("research collaborations", "academic enquiries", "DFTB",
-                      "metal-halide perovskites", "machine-learning interatomic potentials"):
+                      "metal-halide perovskites", "machine-learning interatomic potentials",
+                      "or related topics", "collaborations with experimental researchers"):
             self.assertIn(topic, contact)
 
 
