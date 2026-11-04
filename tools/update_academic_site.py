@@ -1664,6 +1664,7 @@ def home_body() -> str:
         <a class="jp-button" href="/research/">Research</a>
         <a class="jp-button jp-button--ghost" href="/publication/">Publications</a>
         <a class="jp-button jp-button--ghost" href="/experience/">CV</a>
+        <a class="jp-button jp-button--ghost" href="#contact">Contact</a>
       </div>
       {social_links_html()}
     </div>
@@ -1722,12 +1723,12 @@ def home_body() -> str:
   <div class="jp-container jp-grid jp-grid--two">
     <div>
       <h2 class="jp-heading">Contact</h2>
-      <p class="jp-lead">I welcome conversations on computational materials science, hybrid semiconductors, perovskite stability, DFTB methods, and machine-learning potentials.</p>
+      <p class="jp-lead">For research collaborations and academic enquiries related to computational materials science, DFTB, metal-halide perovskites, and machine-learning interatomic potentials, please contact me using the work email below.</p>
     </div>
     <div class="jp-card">
       <h3>Junke Jiang</h3>
       <p>School of Physics, Engineering and Technology<br>University of York, Heslington, York YO10 5DD, United Kingdom</p>
-      <p>Email: <a href="mailto:{CURRENT_EMAIL}">{CURRENT_EMAIL}</a></p>
+      <p>Work email: <a href="mailto:{CURRENT_EMAIL}">{CURRENT_EMAIL}</a></p>
       {social_links_html()}
     </div>
   </div>
