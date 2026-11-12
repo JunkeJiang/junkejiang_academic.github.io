@@ -24,7 +24,7 @@ class PublicationUpdateTests(unittest.TestCase):
     def test_small_paper_is_chronological_archive_only_with_verified_roles(self):
         records = site.archive_items()
         record = next(item for item in records if item["slug"] == "abbas-2026-managing")
-        self.assertEqual(records[0]["slug"], record["slug"])
+        self.assertIn(record, records)
         self.assertFalse(record["selected"])
         self.assertEqual(site.publication_date_iso(record), "2026-10-28")
         self.assertEqual(record["venue"], "Small, 2026, e76430")
@@ -49,6 +49,26 @@ class PublicationUpdateTests(unittest.TestCase):
         self.assertEqual(record["thumbnail_status"], "fallback")
         thumbnail = record.get("thumbnail") or site.PUBLICATION_FALLBACK_THUMB
         self.assertTrue((site.ROOT / thumbnail.lstrip("/")).is_file())
+
+    def test_physica_b_paper_uses_verified_online_date_and_supplied_cover(self):
+        records = site.archive_items()
+        record = next(item for item in records if item["slug"] == "xu-2026-influence")
+        self.assertEqual(records[0]["slug"], record["slug"])
+        self.assertEqual(record["authors"], "Zeli Xu, Junke Jiang")
+        self.assertEqual(record["corresponding_authors"], ["Zeli Xu"])
+        self.assertEqual(record["doi"], "https://doi.org/10.1016/j.physb.2026.419609")
+        self.assertEqual(site.publication_date_iso(record), "2026-11-09")
+        self.assertEqual(record["venue"], "Physica B: Condensed Matter, 2026, 419609")
+        self.assertFalse(record["selected"])
+        self.assertEqual(record["thumbnail_status"], "real")
+        self.assertEqual(record["image_type"], "journal_cover")
+        self.assertTrue((site.ROOT / record["thumbnail"].lstrip("/")).is_file())
+        self.assertNotIn(record["doi"], [item["doi"] for item in site.selected_publication_records()])
+        card = site.publication_card(record)
+        self.assertIn('data-image-type="journal_cover"', card)
+        self.assertNotIn("Article Page", card)
+        self.assertNotIn(">Selected</span>", card)
+        self.assertIn(">Summary</h2>", site.publication_detail_enrichment_block(record))
 
     def test_asset_merge_preserves_reviewed_fields_and_custom_columns(self):
         with tempfile.TemporaryDirectory() as directory:
